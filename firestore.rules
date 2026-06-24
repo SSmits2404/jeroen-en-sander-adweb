@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(householdBook) {
+      return householdBook.data.ownerId == request.auth.uid;
+    }
+
+    function isMember(householdBook) {
+      return request.auth.uid in householdBook.data.memberIds;
+    }
+
+    function canReadHouseholdBook(householdBook) {
+      return isSignedIn() && (isOwner(householdBook) || isMember(householdBook));
+    }
+
+    function canEditHouseholdBook(householdBook) {
+      return isSignedIn() && isOwner(householdBook);
+    }
+
+    match /householdBooks/{bookId} {
+      allow read: if canReadHouseholdBook(resource);
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid && request.resource.data.name is string && request.resource.data.name.size() > 0;
+      allow update: if isSignedIn() && canEditHouseholdBook(resource);
+      allow delete: if false;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if isSignedIn() && exists(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)) && (get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.memberIds);
+      allow create: if isSignedIn() && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.budget is number && request.resource.data.budget >= 0 && request.resource.data.householdBookId is string;
+      allow update: if isSignedIn() && request.resource.data.householdBookId is string && exists(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)) && get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.ownerId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn() && exists(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)) && (get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.memberIds);
+      allow create: if isSignedIn() && request.resource.data.householdBookId is string && request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.amount is number && request.resource.data.amount != 0 && (request.resource.data.type == 'expense' || request.resource.data.type == 'income');
+      allow update: if isSignedIn() && exists(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)) && get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.ownerId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+  }
+}
