@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, createElement } from 'react';
 
 interface User {
   id: string;
@@ -16,7 +16,7 @@ const initialState: AppState = {
 const AppStateContext = createContext<AppState>(initialState);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  return <AppStateContext.Provider value={initialState}>{children}</AppStateContext.Provider>;
+  return createElement(AppStateContext.Provider, { value: initialState }, children);
 }
 
 export function useAppState() {
