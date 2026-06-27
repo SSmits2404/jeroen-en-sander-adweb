@@ -33,10 +33,25 @@ const defaultState: AppState = {
 // Exported so tests can inject custom values
 export const AppStateContext = createContext<AppState>(defaultState);
 
+const STORAGE_KEY = 'activeBudgetBookId';
+
 export function AppStateProvider({ children }: { children: ReactNode }) {
   // In productie: vervang door onAuthStateChanged van Firebase Auth
   const [user] = useState<User | null>({ id: 'demo-user', name: 'Demo gebruiker' });
-  const [activeBudgetBookId, setActiveBudgetBookId] = useState<string | null>(null);
+
+  // Lees het opgeslagen boekje-ID uit localStorage zodat het na refresh bewaard blijft
+  const [activeBudgetBookId, setActiveBudgetBookIdRaw] = useState<string | null>(
+    () => localStorage.getItem(STORAGE_KEY)
+  );
+
+  function setActiveBudgetBookId(id: string | null) {
+    if (id === null) {
+      localStorage.removeItem(STORAGE_KEY);
+    } else {
+      localStorage.setItem(STORAGE_KEY, id);
+    }
+    setActiveBudgetBookIdRaw(id);
+  }
 
   return createElement(
     AppStateContext.Provider,
