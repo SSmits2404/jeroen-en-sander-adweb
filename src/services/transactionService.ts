@@ -1,29 +1,59 @@
-import { collection, addDoc, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+/**
+ * transactionService.ts
+ *
+ * Beheert transacties (uitgaven/inkomsten) per huishoudboekje via Firestore.
+ * Real-time updates via onSnapshot.
+ */
+import {
+  collection,
+  addDoc,
+  doc,
+  deleteDoc,
+  query,
+  where,
+  onSnapshot,
+  serverTimestamp,
+  Unsubscribe,
+} from 'firebase/firestore';
 import { firestore } from './firebase';
 
-export interface TransactionEntity {
-  id?: string;
+export interface Transaction {
+  id: string;
   description: string;
   amount: number;
   date: string;
   type: 'expense' | 'income';
   categoryId?: string;
+  budgetBookId: string;
+  userId: string;
 }
 
-const transactionCollection = collection(firestore, 'transactions');
+const COL = 'transactions';
 
-export async function createTransaction(transaction: Omit<TransactionEntity, 'id'>) {
-  const docRef = await addDoc(transactionCollection, transaction);
-  return { id: docRef.id, ...transaction };
+export function subscribeTransactions(
+  budgetBookId: string,
+  onData: (transactions: Transaction[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(firestore, COL),
+    where('budgetBookId', '==', budgetBookId)
+  );
+  return onSnapshot(q, (snap) => {
+    onData(
+      snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Transaction, 'id'>) }))
+    );
+  });
 }
 
-export async function deleteTransaction(transactionId: string) {
-  const ref = doc(firestore, 'transactions', transactionId);
-  await deleteDoc(ref);
+export async function createTransaction(
+  transaction: Omit<Transaction, 'id'>
+): Promise<void> {
+  await addDoc(collection(firestore, COL), {
+    ...transaction,
+    createdAt: serverTimestamp(),
+  });
 }
 
-export async function fetchTransactionsByUser(userId: string) {
-  const q = query(transactionCollection, where('userId', '==', userId));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, ...docSnapshot.data() })) as TransactionEntity[];
+export async function deleteTransaction(id: string): Promise<void> {
+  await deleteDoc(doc(firestore, COL, id));
 }

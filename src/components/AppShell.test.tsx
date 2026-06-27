@@ -9,7 +9,7 @@ describe('AppShell', () => {
         sections={[{ id: 'dashboard', label: 'Dashboard' }]}
         activeSection="dashboard"
         onSectionChange={() => {}}
-        user={{ name: 'Test gebruiker', id: 'test' }}
+        user={{ name: 'Test gebruiker' }}
       >
         <div>Child</div>
       </AppShell>
