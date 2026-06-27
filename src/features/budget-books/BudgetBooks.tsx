@@ -1,56 +1,102 @@
-import { useState } from 'react';
-
-interface BudgetBook {
-  id: string;
-  name: string;
-  description: string;
-  archived: boolean;
-}
-
-const demoBooks: BudgetBook[] = [
-  { id: '1', name: 'Gezin', description: 'Huishoudboekje voor het gezin', archived: false },
-  { id: '2', name: 'Vakantie', description: 'Vakantiebudget', archived: true }
-];
+/**
+ * BudgetBooks.tsx
+ *
+ * Component dat huishoudboekjes toont en beheert.
+ * Separation of Concern:
+ * - Dit component weet NIETS van Firestore — het roept alleen de service aan.
+ * - Real-time: via subscribeBudgetBooks (onSnapshot) werkt de lijst automatisch bij.
+ */
+import { useEffect, useState } from 'react';
+import {
+  subscribeBudgetBooks,
+  createBudgetBook,
+  archiveBudgetBook,
+  restoreBudgetBook,
+  BudgetBook,
+} from '../../services/budgetBookService';
+import { useAppState } from '../../state/appState';
 
 export function BudgetBooks() {
-  const [budgetBooks, setBudgetBooks] = useState<BudgetBook[]>(demoBooks);
+  const { user, activeBudgetBookId, setActiveBudgetBookId } = useAppState();
+  const [budgetBooks, setBudgetBooks] = useState<BudgetBook[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const activeBooks = budgetBooks.filter((book) => !book.archived);
-  const archivedBooks = budgetBooks.filter((book) => book.archived);
+  // Real-time subscription — cleanup in return van useEffect
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
 
-  function createBook() {
-    if (!name.trim()) return;
-    setBudgetBooks((current) => [
-      ...current,
-      { id: crypto.randomUUID(), name: name.trim(), description: description.trim(), archived: false }
-    ]);
-    setName('');
-    setDescription('');
+    const unsubscribe = subscribeBudgetBooks(user.id, (books) => {
+      setBudgetBooks(books);
+      setLoading(false);
+    });
+
+    // Cleanup: verwijder de Firebase listener als het component unmount
+    return () => unsubscribe();
+  }, [user]);
+
+  const activeBooks = budgetBooks.filter((b) => !b.archived);
+  const archivedBooks = budgetBooks.filter((b) => b.archived);
+
+  async function handleCreate() {
+    if (!name.trim() || !user) return;
+    try {
+      await createBudgetBook(name.trim(), description.trim(), user.id);
+      setName('');
+      setDescription('');
+    } catch {
+      setError('Kon boekje niet aanmaken. Probeer opnieuw.');
+    }
   }
 
-  function archiveBook(id: string) {
-    setBudgetBooks((current) => current.map((book) => (book.id === id ? { ...book, archived: true } : book)));
+  async function handleArchive(id: string) {
+    try {
+      await archiveBudgetBook(id);
+      if (activeBudgetBookId === id) setActiveBudgetBookId(null);
+    } catch {
+      setError('Archiveren mislukt.');
+    }
   }
 
-  function restoreBook(id: string) {
-    setBudgetBooks((current) => current.map((book) => (book.id === id ? { ...book, archived: false } : book)));
+  async function handleRestore(id: string) {
+    try {
+      await restoreBudgetBook(id);
+    } catch {
+      setError('Herstellen mislukt.');
+    }
   }
+
+  if (loading) return <p>Laden…</p>;
 
   return (
     <div>
       <h2 className="section-title">Huishoudboekjes</h2>
+
+      {error && <p className="error-text">{error}</p>}
+
       <div className="form-row">
         <div className="input-group">
-          <label>Naam</label>
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Naam huishoudboekje" />
+          <label htmlFor="bb-name">Naam</label>
+          <input
+            id="bb-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Naam huishoudboekje"
+          />
         </div>
         <div className="input-group">
-          <label>Omschrijving</label>
-          <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Omschrijving" />
+          <label htmlFor="bb-desc">Omschrijving</label>
+          <input
+            id="bb-desc"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Omschrijving"
+          />
         </div>
-        <button className="primary-button" type="button" onClick={createBook}>
+        <button className="primary-button" type="button" onClick={handleCreate} disabled={!name.trim()}>
           Boekje toevoegen
         </button>
       </div>
@@ -58,14 +104,25 @@ export function BudgetBooks() {
       <div className="grid grid-2">
         <div className="card">
           <h3>Actieve boekjes</h3>
+          {activeBooks.length === 0 && <p className="empty-text">Geen actieve boekjes.</p>}
           <ul className="list-card">
             {activeBooks.map((book) => (
-              <li key={book.id}>
+              <li key={book.id} className={activeBudgetBookId === book.id ? 'active-book' : ''}>
                 <strong>{book.name}</strong>
-                <p>{book.description}</p>
-                <button className="secondary-button" type="button" onClick={() => archiveBook(book.id)}>
-                  Archiveren
-                </button>
+                {book.description && <p>{book.description}</p>}
+                <div className="button-row">
+                  <button
+                    className="primary-button small"
+                    type="button"
+                    onClick={() => setActiveBudgetBookId(book.id)}
+                    disabled={activeBudgetBookId === book.id}
+                  >
+                    {activeBudgetBookId === book.id ? '✓ Geselecteerd' : 'Selecteren'}
+                  </button>
+                  <button className="secondary-button small" type="button" onClick={() => handleArchive(book.id)}>
+                    Archiveren
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -73,12 +130,13 @@ export function BudgetBooks() {
 
         <div className="card">
           <h3>Gearchiveerde boekjes</h3>
+          {archivedBooks.length === 0 && <p className="empty-text">Geen gearchiveerde boekjes.</p>}
           <ul className="list-card">
             {archivedBooks.map((book) => (
               <li key={book.id}>
                 <strong>{book.name}</strong>
-                <p>{book.description}</p>
-                <button className="secondary-button" type="button" onClick={() => restoreBook(book.id)}>
+                {book.description && <p>{book.description}</p>}
+                <button className="secondary-button small" type="button" onClick={() => handleRestore(book.id)}>
                   Herstellen
                 </button>
               </li>

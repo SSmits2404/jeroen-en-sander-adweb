@@ -1,22 +1,67 @@
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+/**
+ * categoryService.ts
+ *
+ * Beheert categorieën per huishoudboekje via Firestore.
+ * Real-time updates via onSnapshot.
+ */
+import {
+  collection,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  onSnapshot,
+  serverTimestamp,
+  Unsubscribe,
+} from 'firebase/firestore';
 import { firestore } from './firebase';
 
-export interface CategoryEntity {
-  id?: string;
+export interface Category {
+  id: string;
   name: string;
   budget: number;
-  userId: string;
+  endDate?: string;
+  budgetBookId: string;
 }
 
-const categoryCollection = collection(firestore, 'categories');
+const COL = 'categories';
 
-export async function createCategory(category: Omit<CategoryEntity, 'id'>) {
-  const docRef = await addDoc(categoryCollection, category);
-  return { id: docRef.id, ...category };
+export function subscribeCategories(
+  budgetBookId: string,
+  onData: (cats: Category[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(firestore, COL),
+    where('budgetBookId', '==', budgetBookId)
+  );
+  return onSnapshot(q, (snap) => {
+    onData(
+      snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Category, 'id'>) }))
+    );
+  });
 }
 
-export async function fetchCategoriesByUser(userId: string) {
-  const q = query(categoryCollection, where('userId', '==', userId));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, ...docSnapshot.data() })) as CategoryEntity[];
+export async function createCategory(
+  category: Omit<Category, 'id'>
+): Promise<void> {
+  await addDoc(collection(firestore, COL), {
+    ...category,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function updateCategory(
+  id: string,
+  fields: Partial<Omit<Category, 'id'>>
+): Promise<void> {
+  await updateDoc(doc(firestore, COL, id), {
+    ...fields,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await deleteDoc(doc(firestore, COL, id));
 }

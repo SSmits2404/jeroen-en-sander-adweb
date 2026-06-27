@@ -1,22 +1,48 @@
-import { createContext, useContext, ReactNode, createElement } from 'react';
+/**
+ * appState.ts
+ *
+ * Globale state voor authenticatie en geselecteerd huishoudboekje.
+ * Separation of Concern: components consumeren alleen deze context,
+ * ze weten niets van Firebase Auth internals.
+ */
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  createElement,
+} from 'react';
 
-interface User {
+export interface User {
   id: string;
   name: string;
 }
 
 interface AppState {
   user: User | null;
+  activeBudgetBookId: string | null;
+  setActiveBudgetBookId: (id: string | null) => void;
 }
 
-const initialState: AppState = {
-  user: { id: 'demo-user', name: 'Demo gebruiker' }
+const defaultState: AppState = {
+  user: null,
+  activeBudgetBookId: null,
+  setActiveBudgetBookId: () => {},
 };
 
-const AppStateContext = createContext<AppState>(initialState);
+// Exported so tests can inject custom values
+export const AppStateContext = createContext<AppState>(defaultState);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  return createElement(AppStateContext.Provider, { value: initialState }, children);
+  // In productie: vervang door onAuthStateChanged van Firebase Auth
+  const [user] = useState<User | null>({ id: 'demo-user', name: 'Demo gebruiker' });
+  const [activeBudgetBookId, setActiveBudgetBookId] = useState<string | null>(null);
+
+  return createElement(
+    AppStateContext.Provider,
+    { value: { user, activeBudgetBookId, setActiveBudgetBookId } },
+    children
+  );
 }
 
 export function useAppState() {

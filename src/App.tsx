@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AppShell } from './components/AppShell';
-import { Dashboard } from './features/dashboard/Dashboard';
+import Dashboard from './features/dashboard/Dashboard';
 import { BudgetBooks } from './features/budget-books/BudgetBooks';
 import { Categories } from './features/categories/Categories';
 import { Transactions } from './features/transactions/Transactions';
