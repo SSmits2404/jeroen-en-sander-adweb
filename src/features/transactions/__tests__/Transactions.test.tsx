@@ -29,7 +29,12 @@ const mockTransactions = [
 // Helper: render met een actief boekje in context
 function renderWithBook() {
   return render(
-    <AppStateContext.Provider value={{ user: { id: 'demo-user', name: 'Demo' }, activeBudgetBookId: 'book1', setActiveBudgetBookId: vi.fn() }}>
+    <AppStateContext.Provider value={{
+      user: { id: 'demo-user', name: 'Demo', email: 'demo@example.com' },
+      activeBudgetBookId: 'book1',
+      setActiveBudgetBookId: vi.fn(),
+      authReady: true,
+    }}>
       <Transactions />
     </AppStateContext.Provider>
   );

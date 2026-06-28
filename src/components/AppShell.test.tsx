@@ -9,6 +9,7 @@ describe('AppShell', () => {
         sections={[{ id: 'dashboard', label: 'Dashboard' }]}
         activeSection="dashboard"
         onSectionChange={() => {}}
+        onLogout={() => {}}
         user={{ name: 'Test gebruiker' }}
       >
         <div>Child</div>
@@ -26,6 +27,7 @@ describe('AppShell', () => {
         sections={[{ id: 'dashboard', label: 'Dashboard' }]}
         activeSection="dashboard"
         onSectionChange={onSectionChange}
+        onLogout={() => {}}
         user={null}
       >
         <div>Child</div>
