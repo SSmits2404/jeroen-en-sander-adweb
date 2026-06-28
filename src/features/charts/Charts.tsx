@@ -27,14 +27,6 @@ import { useAppState } from '../../state/appState';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-/**
- * Geeft de laatste `n` maanden terug als YYYY-MM strings, meest recent laatste.
- *
- * JavaScript Date is 0-indexed voor maanden: getMonth() van juni = 5.
- * new Date(2026, 5 - 0, 1) = 1 juni 2026  ✓
- * new Date(2026, 5 - 5, 1) = 1 januari 2026 ✓
- * De +1 die eerder stond was een off-by-one: dat gaf de huidige+1 maand mee.
- */
 function lastNMonths(n: number): string[] {
   const months: string[] = [];
   const now = new Date();
