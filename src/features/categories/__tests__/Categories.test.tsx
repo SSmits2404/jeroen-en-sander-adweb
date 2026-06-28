@@ -32,11 +32,77 @@ const mockCategories = [
   },
 ];
 
-const mockTransactions = [
+const normalTransactions = [
+  {
+    id: 'tx1',
+    description: 'Boodschappen',
+    amount: 20,
+    date: '2026-06-18',
+    type: 'expense' as const,
+    categoryId: 'cat1',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+  {
+    id: 'tx2',
+    description: 'Terugbetaling',
+    amount: 5,
+    date: '2026-06-19',
+    type: 'income' as const,
+    categoryId: 'cat1',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+  {
+    id: 'tx3',
+    description: 'Hotel',
+    amount: 20,
+    date: '2026-06-20',
+    type: 'expense' as const,
+    categoryId: 'cat2',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+];
+
+const warningTransactions = [
   {
     id: 'tx1',
     description: 'Boodschappen',
     amount: 96,
+    date: '2026-06-18',
+    type: 'expense' as const,
+    categoryId: 'cat1',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+  {
+    id: 'tx2',
+    description: 'Terugbetaling',
+    amount: 5,
+    date: '2026-06-19',
+    type: 'income' as const,
+    categoryId: 'cat1',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+  {
+    id: 'tx3',
+    description: 'Hotel',
+    amount: 20,
+    date: '2026-06-20',
+    type: 'expense' as const,
+    categoryId: 'cat2',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+];
+
+const overBudgetTransactions = [
+  {
+    id: 'tx1',
+    description: 'Boodschappen',
+    amount: 20,
     date: '2026-06-18',
     type: 'expense' as const,
     categoryId: 'cat1',
@@ -65,7 +131,7 @@ const mockTransactions = [
   },
 ];
 
-function renderWithBook() {
+function renderWithBook(transactions = normalTransactions) {
   return render(
     <AppStateContext.Provider
       value={{
@@ -79,36 +145,63 @@ function renderWithBook() {
   );
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-
+function mockSubscriptions(transactions = normalTransactions) {
   vi.mocked(catService.subscribeCategories).mockImplementation((_id, cb) => {
     cb(mockCategories);
     return vi.fn();
   });
 
   vi.mocked(txService.subscribeTransactions).mockImplementation((_id, cb) => {
-    cb(mockTransactions);
+    cb(transactions);
     return vi.fn();
   });
 
   vi.mocked(catService.createCategory).mockResolvedValue();
   vi.mocked(catService.updateCategory).mockResolvedValue();
   vi.mocked(catService.deleteCategory).mockResolvedValue();
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockSubscriptions(normalTransactions);
 });
 
 describe('Categories', () => {
-  it('toont categorieën, budgetstatus en telt inkomen mee als budgetverlaging', async () => {
-    renderWithBook();
+  it('toont categorie met normale voortgang (onder 90%)', async () => {
+    mockSubscriptions(normalTransactions);
+    renderWithBook(normalTransactions);
 
     expect(await screen.findByText('Voeding')).toBeInTheDocument();
-    expect(screen.getByText('Reis')).toBeInTheDocument();
 
-    expect(screen.getByText(/Budget: €100\.00 • Gebruikt: €91\.00 • Resterend: €9\.00/)).toBeInTheDocument();
-    expect(screen.getByText(/Budget: €50\.00 • Gebruikt: €60\.00 • Resterend: €-10\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Gebruikt: €15\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Resterend: €85\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Budget: €100\.00/)).toBeInTheDocument();
+
+    expect(screen.queryByText('Budget bijna op')).not.toBeInTheDocument();
+    expect(screen.queryByText('Over budget!')).not.toBeInTheDocument();
+  });
+
+  it('toont waarschuwing bij bijna vol budget (boven 90%)', async () => {
+    mockSubscriptions(warningTransactions);
+    renderWithBook(warningTransactions);
+
+    expect(await screen.findByText('Voeding')).toBeInTheDocument();
 
     expect(screen.getByText('Budget bijna op')).toBeInTheDocument();
+    expect(screen.queryByText('Over budget!')).not.toBeInTheDocument();
+
+    expect(screen.getByText(/Gebruikt: €91\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Resterend: €9\.00/)).toBeInTheDocument();
+  });
+
+  it('toont over budget status correct', async () => {
+    mockSubscriptions(overBudgetTransactions);
+    renderWithBook(overBudgetTransactions);
+
+    expect(await screen.findByText('Reis')).toBeInTheDocument();
     expect(screen.getByText('Over budget!')).toBeInTheDocument();
+
+    expect(screen.getByText(/Resterend: €-10\.00/)).toBeInTheDocument();
   });
 
   it('maakt een categorie aan zonder einddatum', async () => {
