@@ -10,10 +10,18 @@ interface AppShellProps {
   activeSection: string;
   onSectionChange: (id: string) => void;
   user: { name: string } | null;
+  onLogout: () => void;
   children: ReactNode;
 }
 
-export function AppShell({ sections, activeSection, onSectionChange, user, children }: AppShellProps) {
+export function AppShell({
+  sections,
+  activeSection,
+  onSectionChange,
+  user,
+  onLogout,
+  children,
+}: AppShellProps) {
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -21,7 +29,19 @@ export function AppShell({ sections, activeSection, onSectionChange, user, child
           <h1>Huishoudboekje</h1>
           <p>Beheer je uitgaven, categorieën en boekjes.</p>
         </div>
-        <div>{user ? <span>Ingelogd als {user.name}</span> : <span>Niet ingelogd</span>}</div>
+
+        <div className="button-row">
+          {user ? (
+            <>
+              <span>Ingelogd als {user.name}</span>
+              <button className="secondary-button small" type="button" onClick={onLogout}>
+                Uitloggen
+              </button>
+            </>
+          ) : (
+            <span>Niet ingelogd</span>
+          )}
+        </div>
       </header>
 
       <nav className="nav-list" aria-label="Hoofdsecties">
@@ -30,6 +50,7 @@ export function AppShell({ sections, activeSection, onSectionChange, user, child
             key={section.id}
             className={`nav-button ${activeSection === section.id ? 'active' : ''}`}
             onClick={() => onSectionChange(section.id)}
+            type="button"
           >
             {section.label}
           </button>

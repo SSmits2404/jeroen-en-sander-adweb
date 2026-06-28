@@ -2,60 +2,93 @@
  * appState.ts
  *
  * Globale state voor authenticatie en geselecteerd huishoudboekje.
- * Separation of Concern: components consumeren alleen deze context,
- * ze weten niets van Firebase Auth internals.
+ * Components consumeren alleen deze context, ze weten niets van Firebase Auth internals.
  */
 import {
   createContext,
   useContext,
+  useEffect,
   useState,
   ReactNode,
   createElement,
 } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../services/firebase';
+import { mapFirebaseUser, type AppUser } from '../services/authService';
 
-export interface User {
-  id: string;
-  name: string;
-}
+export interface User extends AppUser {}
 
 interface AppState {
   user: User | null;
+  authReady: boolean;
   activeBudgetBookId: string | null;
   setActiveBudgetBookId: (id: string | null) => void;
 }
 
 const defaultState: AppState = {
   user: null,
+  authReady: false,
   activeBudgetBookId: null,
   setActiveBudgetBookId: () => {},
 };
 
-// Exported so tests can inject custom values
 export const AppStateContext = createContext<AppState>(defaultState);
 
 const STORAGE_KEY = 'activeBudgetBookId';
+const storageKeyForUser = (userId: string) => `${STORAGE_KEY}:${userId}`;
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  // In productie: vervang door onAuthStateChanged van Firebase Auth
-  const [user] = useState<User | null>({ id: 'demo-user', name: 'Demo gebruiker' });
+  const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [activeBudgetBookId, setActiveBudgetBookIdRaw] = useState<string | null>(null);
 
-  // Lees het opgeslagen boekje-ID uit localStorage zodat het na refresh bewaard blijft
-  const [activeBudgetBookId, setActiveBudgetBookIdRaw] = useState<string | null>(
-    () => localStorage.getItem(STORAGE_KEY)
-  );
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser ? mapFirebaseUser(firebaseUser) : null);
+      setAuthReady(true);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!authReady) return;
+
+    if (!user) {
+      setActiveBudgetBookIdRaw(null);
+      return;
+    }
+
+    setActiveBudgetBookIdRaw(localStorage.getItem(storageKeyForUser(user.id)));
+  }, [authReady, user?.id]);
 
   function setActiveBudgetBookId(id: string | null) {
-    if (id === null) {
-      localStorage.removeItem(STORAGE_KEY);
-    } else {
-      localStorage.setItem(STORAGE_KEY, id);
+    if (!user) {
+      setActiveBudgetBookIdRaw(id);
+      return;
     }
+
+    const key = storageKeyForUser(user.id);
+
+    if (id === null) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, id);
+    }
+
     setActiveBudgetBookIdRaw(id);
   }
 
   return createElement(
     AppStateContext.Provider,
-    { value: { user, activeBudgetBookId, setActiveBudgetBookId } },
+    {
+      value: {
+        user,
+        authReady,
+        activeBudgetBookId,
+        setActiveBudgetBookId,
+      },
+    },
     children
   );
 }
