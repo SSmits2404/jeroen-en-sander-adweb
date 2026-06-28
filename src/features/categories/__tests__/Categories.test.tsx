@@ -150,6 +150,14 @@ function renderWithBook(transactions = normalTransactions) {
     <AppStateContext.Provider value={{
       user: { id: 'demo-user', name: 'Demo', email: 'demo@example.com' },
       activeBudgetBookId: 'book1',
+      activeBudgetBook: {
+        id: 'book1',
+        name: 'Demo budget book',
+        description: 'Demo budget book description',
+        ownerId: 'demo-user',
+        archived: false,
+        memberIds: ['demo-user'],
+      },
       setActiveBudgetBookId: vi.fn(),
       authReady: true,
     }}>

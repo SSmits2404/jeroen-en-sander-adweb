@@ -8,10 +8,10 @@
  * Namen worden opgehaald via useMemberProfiles (hook) en acties via inviteService.
  */
 import { useState } from 'react';
-import { inviteMember, removeMember } from '../../services/inviteService';
-import { BudgetBook } from '../../services/budgetBookService';
-import { useAppState } from '../../state/appState';
-import { useMemberProfiles } from '../../hooks/useMemberProfiles';
+import { inviteMember, removeMember } from '../services/inviteService';
+import { BudgetBook } from '../services/budgetBookService';
+import { useAppState } from '../state/appState';
+import { useMemberProfiles } from '../hooks/useMemberProfiles';
 
 interface MembersPanelProps {
   book: BudgetBook;

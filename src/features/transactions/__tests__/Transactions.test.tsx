@@ -47,8 +47,17 @@ function renderWithBook() {
   return render(
     <AppStateContext.Provider
       value={{
-        user: { id: 'demo-user', name: 'Demo' },
+        user: { id: 'demo-user', name: 'Demo', email: 'demo@demo.com' },
+        authReady: true,
         activeBudgetBookId: 'book1',
+        activeBudgetBook: {
+          id: 'book1',
+          name: 'Demo',
+          description: 'Demo budgetboek',
+          ownerId: 'demo-user',
+          archived: false,
+          memberIds: ['demo-user'],
+        },
         setActiveBudgetBookId: vi.fn(),
       }}
     >
@@ -164,13 +173,24 @@ describe('Transactions', () => {
 
   it('toont fallback wanneer geen budgetboek actief is', () => {
     render(
-      <AppStateContext.Provider value={{
-        user: { id: 'demo-user', name: 'Demo' },
-        activeBudgetBookId: null,
+      <AppStateContext.Provider
+      value={{
+        user: { id: 'demo-user', name: 'Demo', email: 'demo@demo.com' },
+        authReady: true,
+        activeBudgetBookId: 'book1',
+        activeBudgetBook: {
+          id: 'book1',
+          name: 'Demo',
+          description: 'Demo budgetboek',
+          ownerId: 'demo-user',
+          archived: false,
+          memberIds: ['demo-user'],
+        },
         setActiveBudgetBookId: vi.fn(),
-      }}>
-        <Transactions />
-      </AppStateContext.Provider>
+      }}
+    >
+      <Transactions />
+    </AppStateContext.Provider>
     );
 
     expect(
