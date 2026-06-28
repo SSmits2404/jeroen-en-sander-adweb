@@ -7,12 +7,30 @@ import { BudgetBooks } from '../BudgetBooks';
 import * as budgetBookService from '../../../services/budgetBookService';
 import { AppStateProvider } from '../../../state/appState';
 
+// Voeg de Firebase Mocks toe die de AppStateProvider nodig heeft!
+vi.mock('../../../services/firebase', () => ({
+  auth: {},
+  firestore: {},
+}));
+
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn((auth, callback) => {
+    callback({ 
+      uid: 'demo-user', 
+      displayName: 'Demo gebruiker',
+      email: 'demo@voorbeeld.nl'
+    });
+    return vi.fn();
+  }),
+}));
+
 const mockBooks = [
   { id: '1', name: 'Gezin', description: 'Familie', ownerId: 'demo-user', memberIds: ['demo-user'], archived: false },
   { id: '2', name: 'Vakantie', description: 'Zomer', ownerId: 'demo-user', memberIds: ['demo-user'], archived: true },
 ];
 
-// 1. Mock de service-module direct met de werkende callback-implementatie bovenin!
+// Mock de service-module direct met de werkende callback-implementatie
 vi.mock('../../../services/budgetBookService', () => ({
   subscribeBudgetBooks: vi.fn((_uid, cb) => {
     cb([
@@ -35,11 +53,9 @@ function renderWithProvider() {
 }
 
 beforeEach(() => {
-  // 2. Clear alleen de call-historie, behoud de mock-implementaties hierboven
   vi.clearAllMocks();
 });
 
-// ... de rest van je describe('BudgetBooks', () => { ... }) blijft exact hetzelfde
 describe('BudgetBooks', () => {
   it('toont actieve en gearchiveerde boekjes', async () => {
     renderWithProvider();
