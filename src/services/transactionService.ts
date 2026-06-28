@@ -8,6 +8,7 @@ import {
   collection,
   addDoc,
   doc,
+  updateDoc,
   deleteDoc,
   query,
   where,
@@ -38,9 +39,13 @@ export function subscribeTransactions(
     collection(firestore, COL),
     where('budgetBookId', '==', budgetBookId)
   );
+
   return onSnapshot(q, (snap) => {
     onData(
-      snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Transaction, 'id'>) }))
+      snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<Transaction, 'id'>),
+      }))
     );
   });
 }
@@ -51,6 +56,16 @@ export async function createTransaction(
   await addDoc(collection(firestore, COL), {
     ...transaction,
     createdAt: serverTimestamp(),
+  });
+}
+
+export async function updateTransaction(
+  id: string,
+  fields: Partial<Omit<Transaction, 'id'>>
+): Promise<void> {
+  await updateDoc(doc(firestore, COL, id), {
+    ...fields,
+    updatedAt: serverTimestamp(),
   });
 }
 

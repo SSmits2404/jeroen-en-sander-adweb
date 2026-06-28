@@ -9,11 +9,16 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   subscribeTransactions,
   createTransaction,
+  updateTransaction,
   deleteTransaction,
   Transaction,
 } from '../../services/transactionService';
 import { subscribeCategories, Category } from '../../services/categoryService';
 import { useAppState } from '../../state/appState';
+
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export function Transactions() {
   const { user, activeBudgetBookId } = useAppState();
@@ -23,6 +28,8 @@ export function Transactions() {
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [categoryId, setCategoryId] = useState('');
+  const [transactionDate, setTransactionDate] = useState(todayString());
+  const [editId, setEditId] = useState<string | null>(null);
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7));
   const [error, setError] = useState<string | null>(null);
 
@@ -60,11 +67,33 @@ export function Transactions() {
     .reduce((sum, t) => sum + t.amount, 0);
   const balance = totalIncome - totalExpense;
 
-  async function handleCreate() {
+  function resetForm() {
+    setDescription('');
+    setAmount('');
+    setType('expense');
+    setCategoryId('');
+    setTransactionDate(todayString());
+    setEditId(null);
+  }
+
+  function startEdit(transaction: Transaction) {
+    setEditId(transaction.id);
+    setDescription(transaction.description);
+    setAmount(String(transaction.amount));
+    setType(transaction.type);
+    setCategoryId(transaction.categoryId ?? '');
+    setTransactionDate(transaction.date);
+    setError(null);
+  }
+
+  async function handleSubmit() {
     const value = Number(amount);
     const categoryRequired = categories.length > 0;
 
-    if (!description.trim() || !value || !user || !activeBudgetBookId) return;
+    if (!description.trim() || Number.isNaN(value) || value <= 0 || !user || !activeBudgetBookId) {
+      return;
+    }
+
     if (categoryRequired && !categoryId) {
       setError('Selecteer een categorie.');
       return;
@@ -73,21 +102,31 @@ export function Transactions() {
     try {
       setError(null);
 
-      await createTransaction({
-        description: description.trim(),
-        amount: value,
-        date: new Date().toISOString().slice(0, 10),
-        type,
-        categoryId: categoryId || undefined,
-        budgetBookId: activeBudgetBookId,
-        userId: user.id,
-      });
+      if (editId) {
+        await updateTransaction(editId, {
+          description: description.trim(),
+          amount: value,
+          date: transactionDate,
+          type,
+          categoryId: categoryId || undefined,
+          budgetBookId: activeBudgetBookId,
+          userId: user.id,
+        });
+      } else {
+        await createTransaction({
+          description: description.trim(),
+          amount: value,
+          date: transactionDate,
+          type,
+          categoryId: categoryId || undefined,
+          budgetBookId: activeBudgetBookId,
+          userId: user.id,
+        });
+      }
 
-      setDescription('');
-      setAmount('');
-      setCategoryId('');
+      resetForm();
     } catch {
-      setError('Transactie aanmaken mislukt.');
+      setError(editId ? 'Transactie opslaan mislukt.' : 'Transactie aanmaken mislukt.');
     }
   }
 
@@ -162,7 +201,11 @@ export function Transactions() {
         {categories.length > 0 && (
           <div className="input-group">
             <label htmlFor="tx-cat">Categorie</label>
-            <select id="tx-cat" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <select
+              id="tx-cat"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
               <option value="">Selecteer categorie</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -175,11 +218,24 @@ export function Transactions() {
         <button
           className="primary-button"
           type="button"
-          onClick={handleCreate}
-          disabled={!description.trim() || !amount || (categories.length > 0 && !categoryId)}
+          onClick={handleSubmit}
+          disabled={
+            !description.trim() ||
+            !amount ||
+            (categories.length > 0 && !categoryId)
+          }
         >
-          Toevoegen
+          {editId ? 'Opslaan' : 'Toevoegen'}
         </button>
+        {editId && (
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={resetForm}
+          >
+            Annuleren
+          </button>
+        )}
       </div>
 
       <div className="form-row">
@@ -215,13 +271,22 @@ export function Transactions() {
                   <span className={`amount ${t.type}`}>
                     {t.type === 'expense' ? '-' : '+'}€{t.amount.toFixed(2)}
                   </span>
-                  <button
-                    className="secondary-button small"
-                    type="button"
-                    onClick={() => handleDelete(t.id)}
-                  >
-                    Verwijderen
-                  </button>
+                  <div className="button-row">
+                    <button
+                      className="secondary-button small"
+                      type="button"
+                      onClick={() => startEdit(t)}
+                    >
+                      Bewerken
+                    </button>
+                    <button
+                      className="secondary-button small"
+                      type="button"
+                      onClick={() => handleDelete(t.id)}
+                    >
+                      Verwijderen
+                    </button>
+                  </div>
                 </div>
               </li>
             );

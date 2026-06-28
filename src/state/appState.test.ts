@@ -1,61 +1,59 @@
-/**
- * appState.test.ts
- *
- * Test de AppState context.
- * Firebase Auth wordt gemockt zodat onAuthStateChanged controleerbaar is.
- */
-import { ReactNode, createElement, act } from 'react';
-import { renderHook } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createElement, type ReactNode } from 'react';
+import { renderHook, waitFor, act } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppStateProvider, useAppState } from './appState';
-
-// ── mock Firebase Auth ──────────────────────────────────────────────────────
-// We mocken de hele firebase/auth module. onAuthStateChanged roept de callback
-// direct aan met null (niet ingelogd), zodat de test geen netwerk nodig heeft.
-vi.mock('firebase/auth', () => ({
-  onAuthStateChanged: vi.fn((_auth, cb) => {
-    cb(null); // geen ingelogde gebruiker
-    return vi.fn(); // unsubscribe
-  }),
-  getAuth: vi.fn(() => ({})),
-}));
 
 vi.mock('../services/firebase', () => ({
   auth: {},
+  firestore: {},
 }));
 
-// ── helpers ─────────────────────────────────────────────────────────────────
-function wrapper({ children }: { children: ReactNode }) {
-  return createElement(AppStateProvider, null, children);
-}
-
-// ── tests ────────────────────────────────────────────────────────────────────
-beforeEach(() => {
-  vi.clearAllMocks();
-  localStorage.clear();
-});
-
 describe('AppState', () => {
-  it('heeft geen gebruiker als Firebase geen sessie levert', async () => {
-    const { result } = renderHook(() => useAppState(), { wrapper });
-    expect(result.current.user).toBeNull();
+  beforeEach(() => {
+    localStorage.clear();
   });
 
-  it('is authReady nadat onAuthStateChanged is aangeroepen', async () => {
-    const { result } = renderHook(() => useAppState(), { wrapper });
-    expect(result.current).toHaveProperty('authReady', true);
-  });
+  it('levert een ingelogde gebruiker uit Firebase Auth', async () => {
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(AppStateProvider, null, children);
 
-  it('begint zonder actief boekje', () => {
     const { result } = renderHook(() => useAppState(), { wrapper });
-    expect(result.current.activeBudgetBookId).toBeNull();
-  });
 
-  it('setActiveBudgetBookId werkt zonder ingelogde gebruiker', () => {
-    const { result } = renderHook(() => useAppState(), { wrapper });
-    act(() => {
-      result.current.setActiveBudgetBookId('book-abc');
+    await waitFor(() => {
+      expect(result.current.authReady).toBe(true);
     });
-    expect(result.current.activeBudgetBookId).toBe('book-abc');
+
+    expect(result.current.user).toEqual({
+      id: 'demo-user',
+      name: 'Demo gebruiker',
+      email: 'demo@voorbeeld.nl',
+    });
+  });
+
+  it('begint zonder actief boekje en kan dat opslaan per gebruiker', async () => {
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(AppStateProvider, null, children);
+
+    const { result } = renderHook(() => useAppState(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.authReady).toBe(true);
+    });
+
+    expect(result.current.activeBudgetBookId).toBeNull();
+
+    await act(async () => {
+      result.current.setActiveBudgetBookId('book-123');
+    });
+
+    expect(result.current.activeBudgetBookId).toBe('book-123');
+    expect(localStorage.getItem('activeBudgetBookId:demo-user')).toBe('book-123');
+
+    await act(async () => {
+      result.current.setActiveBudgetBookId(null);
+    });
+
+    expect(result.current.activeBudgetBookId).toBeNull();
+    expect(localStorage.getItem('activeBudgetBookId:demo-user')).toBeNull();
   });
 });

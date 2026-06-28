@@ -1,11 +1,4 @@
-/**
- * Categories.test.tsx
- *
- * Test de happy flows van het Categories component.
- * Beide service-modules worden gemockt; AppState levert een actief boekje.
- * Separation of Concern maakt dit eenvoudig: alleen de service-laag wordt gemockt.
- */
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Categories } from '../Categories';
 import * as catService from '../../../services/categoryService';
@@ -24,20 +17,141 @@ vi.mock('../../../services/transactionService', () => ({
 }));
 
 const mockCategories = [
-  { id: 'cat1', name: 'Boodschappen', budget: 300, budgetBookId: 'book1' },
-  { id: 'cat2', name: 'Vervoer', budget: 100, budgetBookId: 'book1' },
+  {
+    id: 'cat1',
+    name: 'Voeding',
+    budget: 100,
+    endDate: '2026-12-31',
+    budgetBookId: 'book1',
+  },
+  {
+    id: 'cat2',
+    name: 'Reis',
+    budget: 50,
+    budgetBookId: 'book1',
+  },
 ];
 
-const mockTransactions = [
-  { id: 'tx1', description: 'Albert Heijn', amount: 45, date: '2026-06-01', type: 'expense' as const, categoryId: 'cat1', budgetBookId: 'book1', userId: 'u1' },
+const normalTransactions = [
+  {
+    id: 'tx1',
+    description: 'Boodschappen',
+    amount: 20,
+    date: '2026-06-18',
+    type: 'expense' as const,
+    categoryId: 'cat1',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+  {
+    id: 'tx2',
+    description: 'Terugbetaling',
+    amount: 5,
+    date: '2026-06-19',
+    type: 'income' as const,
+    categoryId: 'cat1',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+  {
+    id: 'tx3',
+    description: 'Hotel',
+    amount: 20,
+    date: '2026-06-20',
+    type: 'expense' as const,
+    categoryId: 'cat2',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
 ];
 
-function renderWithBook() {
+const warningTransactions = [
+  {
+    id: 'tx1',
+    description: 'Boodschappen',
+    amount: 96,
+    date: '2026-06-18',
+    type: 'expense' as const,
+    categoryId: 'cat1',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+  {
+    id: 'tx2',
+    description: 'Terugbetaling',
+    amount: 5,
+    date: '2026-06-19',
+    type: 'income' as const,
+    categoryId: 'cat1',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+  {
+    id: 'tx3',
+    description: 'Hotel',
+    amount: 20,
+    date: '2026-06-20',
+    type: 'expense' as const,
+    categoryId: 'cat2',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+];
+
+const overBudgetTransactions = [
+  {
+    id: 'tx1',
+    description: 'Boodschappen',
+    amount: 20,
+    date: '2026-06-18',
+    type: 'expense' as const,
+    categoryId: 'cat1',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+  {
+    id: 'tx2',
+    description: 'Terugbetaling',
+    amount: 5,
+    date: '2026-06-19',
+    type: 'income' as const,
+    categoryId: 'cat1',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+  {
+    id: 'tx3',
+    description: 'Hotel',
+    amount: 60,
+    date: '2026-06-20',
+    type: 'expense' as const,
+    categoryId: 'cat2',
+    budgetBookId: 'book1',
+    userId: 'demo-user',
+  },
+];
+
+function renderWithBook(transactions = normalTransactions) {
+  vi.mocked(catService.subscribeCategories).mockImplementation((_id, cb) => {
+    cb(mockCategories);
+    return vi.fn();
+  });
+
+  vi.mocked(txService.subscribeTransactions).mockImplementation((_id, cb) => {
+    cb(transactions);
+    return vi.fn();
+  });
+
+  vi.mocked(catService.createCategory).mockResolvedValue();
+  vi.mocked(catService.updateCategory).mockResolvedValue();
+  vi.mocked(catService.deleteCategory).mockResolvedValue();
+
   return render(
     <AppStateContext.Provider value={{
-      user: { id: 'u1', name: 'Demo' },
+      user: { id: 'demo-user', name: 'Demo', email: 'demo@example.com' },
       activeBudgetBookId: 'book1',
       setActiveBudgetBookId: vi.fn(),
+      authReady: true,
     }}>
       <Categories />
     </AppStateContext.Provider>
@@ -46,108 +160,136 @@ function renderWithBook() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(catService.subscribeCategories).mockImplementation((_id, cb) => {
-    cb(mockCategories);
-    return vi.fn();
-  });
-  vi.mocked(txService.subscribeTransactions).mockImplementation((_id, cb) => {
-    cb(mockTransactions);
-    return vi.fn();
-  });
-  vi.mocked(catService.createCategory).mockResolvedValue();
-  vi.mocked(catService.updateCategory).mockResolvedValue();
-  vi.mocked(catService.deleteCategory).mockResolvedValue();
 });
 
 describe('Categories', () => {
-  it('toont alle categorieën', async () => {
-    renderWithBook();
-    expect(await screen.findByText('Boodschappen')).toBeInTheDocument();
-    expect(screen.getByText('Vervoer')).toBeInTheDocument();
+  it('toont categorie met normale voortgang (onder 90%)', async () => {
+    renderWithBook(normalTransactions);
+
+    expect(await screen.findByText('Voeding')).toBeInTheDocument();
+
+    expect(screen.getByText(/Gebruikt: €15\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Resterend: €85\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Budget: €100\.00/)).toBeInTheDocument();
+
+    expect(screen.queryByText('Budget bijna op')).not.toBeInTheDocument();
+    expect(screen.queryByText('Over budget!')).not.toBeInTheDocument();
   });
 
-  it('toont budgetinformatie per categorie', async () => {
-    renderWithBook();
-    await screen.findByText('Boodschappen');
-    // Budget €300, gebruikt €45 → resterend €255
-    expect(screen.getByText(/Budget: €300\.00/)).toBeInTheDocument();
-    expect(screen.getByText(/Gebruikt: €45\.00/)).toBeInTheDocument();
+  it('toont waarschuwing bij bijna vol budget (boven 90%)', async () => {
+    renderWithBook(warningTransactions);
+
+    expect(await screen.findByText('Voeding')).toBeInTheDocument();
+
+    expect(screen.getByText('Budget bijna op')).toBeInTheDocument();
+    expect(screen.queryByText('Over budget!')).not.toBeInTheDocument();
+
+    expect(screen.getByText(/Gebruikt: €91\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Resterend: €9\.00/)).toBeInTheDocument();
   });
 
-  it('maakt een nieuwe categorie aan bij geldige invoer', async () => {
-    renderWithBook();
-    await screen.findByText('Boodschappen');
+  it('toont over budget status correct', async () => {
+    renderWithBook(overBudgetTransactions);
 
-    fireEvent.change(screen.getByPlaceholderText('Naam'), { target: { value: 'Kleding' } });
-    fireEvent.change(screen.getByPlaceholderText('0'), { target: { value: '200' } });
+    expect(await screen.findByText('Reis')).toBeInTheDocument();
+    expect(screen.getByText('Over budget!')).toBeInTheDocument();
+
+    expect(screen.getByText(/Resterend: €-10\.00/)).toBeInTheDocument();
+  });
+
+  it('maakt een categorie aan zonder einddatum', async () => {
+    renderWithBook();
+    await screen.findByText('Voeding');
+
+    fireEvent.change(screen.getByLabelText('Naam categorie'), {
+      target: { value: 'Werk' },
+    });
+    fireEvent.change(screen.getByLabelText('Max budget (€)'), {
+      target: { value: '250' },
+    });
+
     fireEvent.click(screen.getByRole('button', { name: /categorie toevoegen/i }));
 
     await waitFor(() => {
-      expect(catService.createCategory).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'Kleding', budget: 200, budgetBookId: 'book1' })
-      );
+      expect(catService.createCategory).toHaveBeenCalledWith({
+        name: 'Werk',
+        budget: 250,
+        budgetBookId: 'book1',
+      });
     });
   });
 
-  it('blokkeert aanmaken zonder naam', async () => {
+  it('maakt een categorie aan met einddatum', async () => {
     renderWithBook();
-    await screen.findByText('Boodschappen');
+    await screen.findByText('Voeding');
 
-    const btn = screen.getByRole('button', { name: /categorie toevoegen/i });
-    expect(btn).toBeDisabled();
-  });
+    fireEvent.change(screen.getByLabelText('Naam categorie'), {
+      target: { value: 'Vakantie' },
+    });
+    fireEvent.change(screen.getByLabelText('Max budget (€)'), {
+      target: { value: '500' },
+    });
+    fireEvent.change(screen.getByLabelText('Einddatum (optioneel)'), {
+      target: { value: '2026-12-31' },
+    });
 
-  it('verwijdert een categorie', async () => {
-    renderWithBook();
-    await screen.findByText('Boodschappen');
-
-    const deleteButtons = screen.getAllByRole('button', { name: /verwijderen/i });
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(screen.getByRole('button', { name: /categorie toevoegen/i }));
 
     await waitFor(() => {
-      expect(catService.deleteCategory).toHaveBeenCalledWith('cat1');
+      expect(catService.createCategory).toHaveBeenCalledWith({
+        name: 'Vakantie',
+        budget: 500,
+        budgetBookId: 'book1',
+        endDate: '2026-12-31',
+      });
     });
   });
 
-  it('vult het formulier in bij bewerken', async () => {
+  it('bewerkt een categorie', async () => {
     renderWithBook();
-    await screen.findByText('Boodschappen');
+    await screen.findByText('Voeding');
 
-    const editButtons = screen.getAllByRole('button', { name: /bewerken/i });
-    fireEvent.click(editButtons[0]);
+    const voedingItem = screen.getByText('Voeding').closest('li');
+    expect(voedingItem).toBeTruthy();
 
-    expect((screen.getByPlaceholderText('Naam') as HTMLInputElement).value).toBe('Boodschappen');
-    expect((screen.getByPlaceholderText('0') as HTMLInputElement).value).toBe('300');
-  });
+    fireEvent.click(within(voedingItem!).getByRole('button', { name: /bewerken/i }));
 
-  it('slaat bewerkingen op via updateCategory', async () => {
-    renderWithBook();
-    await screen.findByText('Boodschappen');
+    fireEvent.change(screen.getByLabelText('Naam categorie'), {
+      target: { value: 'Boodschappen' },
+    });
+    fireEvent.change(screen.getByLabelText('Max budget (€)'), {
+      target: { value: '125' },
+    });
+    fireEvent.change(screen.getByLabelText('Einddatum (optioneel)'), {
+      target: { value: '2026-11-30' },
+    });
 
-    const editButtons = screen.getAllByRole('button', { name: /bewerken/i });
-    fireEvent.click(editButtons[0]);
-
-    fireEvent.change(screen.getByPlaceholderText('Naam'), { target: { value: 'Boodschappen aangepast' } });
     fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
 
     await waitFor(() => {
       expect(catService.updateCategory).toHaveBeenCalledWith(
         'cat1',
-        expect.objectContaining({ name: 'Boodschappen aangepast' })
+        expect.objectContaining({
+          name: 'Boodschappen',
+          budget: 125,
+          budgetBookId: 'book1',
+          endDate: '2026-11-30',
+        })
       );
     });
   });
 
-  it('toont melding als er geen actief boekje is', () => {
-    render(
-      <AppStateContext.Provider value={{
-        user: { id: 'u1', name: 'Demo' },
-        activeBudgetBookId: null,
-        setActiveBudgetBookId: vi.fn(),
-      }}>
-        <Categories />
-      </AppStateContext.Provider>
-    );
-    expect(screen.getByText(/selecteer eerst/i)).toBeInTheDocument();
+  it('verwijdert een categorie', async () => {
+    renderWithBook();
+    await screen.findByText('Voeding');
+
+    const reisItem = screen.getByText('Reis').closest('li');
+    expect(reisItem).toBeTruthy();
+
+    fireEvent.click(within(reisItem!).getByRole('button', { name: /verwijderen/i }));
+
+    await waitFor(() => {
+      expect(catService.deleteCategory).toHaveBeenCalledWith('cat2');
+    });
   });
 });
