@@ -22,6 +22,31 @@ const localStorageMock = (() => {
 })();
 Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true });
 
+// BINNEN src/features/budget-books/__tests__/BudgetBooks.test.tsx
+
+vi.mock('../../../services/firebase', () => ({
+  auth: {},
+  firestore: {},
+}));
+
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn((auth, callback) => {
+    // Simuleer direct een ingelogde gebruiker 'demo-user'
+    callback({ 
+      uid: 'demo-user', 
+      displayName: 'Demo gebruiker',
+      email: 'demo@voorbeeld.nl'
+    });
+    return vi.fn();
+  }),
+}));
+
+vi.mock('firebase/firestore', () => ({
+  doc: vi.fn(),
+  onSnapshot: vi.fn(() => vi.fn()),
+}));
+
 // Mock de volledige service-module
 vi.mock('../../../services/budgetBookService', () => ({
   subscribeBudgetBooks: vi.fn(),
@@ -35,7 +60,20 @@ const mockBooks = [
   { id: '2', name: 'Vakantie', description: 'Zomer', ownerId: 'demo-user', memberIds: ['demo-user'], archived: true },
 ];
 
+// BINNEN src/features/budget-books/__tests__/BudgetBooks.test.tsx
+
 function renderWithProvider() {
+  // Voeg deze mockImplementation toe zodat de component de mockBooks laadt!
+  vi.mocked(budgetBookService.subscribeBudgetBooks).mockImplementation((_userId, cb) => {
+    cb(mockBooks);
+    return vi.fn(); // geeft een lege unsubscribe functie terug
+  });
+
+  // Zorg ook dat de mutatie-functies netjes resolved worden
+  vi.mocked(budgetBookService.createBudgetBook).mockResolvedValue({ id: 'new-id' } as any);
+  vi.mocked(budgetBookService.archiveBudgetBook).mockResolvedValue();
+  vi.mocked(budgetBookService.restoreBudgetBook).mockResolvedValue();
+
   return render(
     <AppStateProvider>
       <BudgetBooks />

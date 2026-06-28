@@ -3,6 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppStateProvider, useAppState } from './appState';
 
+// BINNEN src/state/appState.test.ts (bovenaan toevoegen)
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
