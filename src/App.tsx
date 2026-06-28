@@ -17,10 +17,6 @@ const sections = [
   { id: 'charts', label: 'Grafieken' },
 ];
 
-function AuthScreen() {
-  return <div>Login required</div>;
-}
-
 function AppContent() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const { user, authReady } = useAppState();
@@ -38,10 +34,6 @@ function AppContent() {
         </section>
       </main>
     );
-  }
-
-  if (!user) {
-    return <AuthScreen />;
   }
 
   if (!user) {
