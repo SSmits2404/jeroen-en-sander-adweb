@@ -3,6 +3,17 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppStateProvider, useAppState } from './appState';
 
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: vi.fn((key: string) => store[key] || null),
+    setItem: vi.fn((key: string, value: string) => { store[key] = value.toString(); }),
+    removeItem: vi.fn((key: string) => { delete store[key]; }),
+    clear: vi.fn(() => { store = {}; }),
+  };
+})();
+Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true });
+
 vi.mock('../services/firebase', () => ({
   auth: {},
   firestore: {},
@@ -10,8 +21,9 @@ vi.mock('../services/firebase', () => ({
 
 describe('AppState', () => {
   beforeEach(() => {
-    localStorage.clear();
-  });
+  vi.clearAllMocks();
+  window.localStorage.clear();
+});
 
   it('levert een ingelogde gebruiker uit Firebase Auth', async () => {
     const wrapper = ({ children }: { children: ReactNode }) =>

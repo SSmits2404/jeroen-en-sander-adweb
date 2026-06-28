@@ -171,30 +171,20 @@ describe('Transactions', () => {
     });
   });
 
-  it('toont fallback wanneer geen budgetboek actief is', () => {
-    render(
-      <AppStateContext.Provider
-      value={{
-        user: { id: 'demo-user', name: 'Demo', email: 'demo@demo.com' },
-        authReady: true,
-        activeBudgetBookId: 'book1',
-        activeBudgetBook: {
-          id: 'book1',
-          name: 'Demo',
-          description: 'Demo budgetboek',
-          ownerId: 'demo-user',
-          archived: false,
-          memberIds: ['demo-user'],
-        },
-        setActiveBudgetBookId: vi.fn(),
-      }}
-    >
+// Voorbeeld van hoe de specifieke testcase aangepast moet worden:
+it('toont fallback wanneer geen budgetboek actief is', () => {
+  render(
+    <AppStateContext.Provider value={{ 
+      user: { id: 'demo-user', name: 'Demo', email: 'demo@test.nl' }, 
+      authReady: true, 
+      activeBudgetBookId: null, // Verplicht null zetten voor deze test!
+      activeBudgetBook: null,   // Verplicht null zetten voor deze test!
+      setActiveBudgetBookId: vi.fn() 
+    }}>
       <Transactions />
     </AppStateContext.Provider>
-    );
+  );
 
-    expect(
-      screen.getByText(/Selecteer eerst een huishoudboekje/i)
-    ).toBeInTheDocument();
-  });
+  expect(screen.getByText(/Selecteer eerst een huishoudboekje/i)).toBeInTheDocument();
+});
 });

@@ -2,7 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import * as authService from '../authService';
 
 vi.mock('../firebase', () => ({
-  auth: {},
+  auth: {
+    currentUser: { uid: 'demo-user' }
+  },
+  firestore: {}, // Dit lost de "No firestore export is defined" foutmelding op!
 }));
 
 vi.mock('firebase/auth', () => ({
