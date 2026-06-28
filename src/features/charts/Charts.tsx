@@ -45,8 +45,15 @@ function shortMonth(ym: string): string {
   return d.toLocaleString('nl-NL', { month: 'short' });
 }
 
-function euroFormatter(value: number) {
-  return `€${value.toFixed(2)}`;
+function euroFormatter(value: number | string | readonly (string | number)[] | undefined) {
+  const amount = Array.isArray(value)
+    ? parseFloat(String(value[0]))
+    : typeof value === 'number'
+    ? value
+    : value
+    ? parseFloat(String(value))
+    : 0;
+  return `€${amount.toFixed(2)}`;
 }
 
 // ─── component ───────────────────────────────────────────────────────────────
