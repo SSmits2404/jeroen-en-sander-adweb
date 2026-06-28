@@ -1,200 +1,224 @@
-:root {
-  font-family: Inter, system-ui, sans-serif;
-  color-scheme: dark;
-  color: #111827;
+/* ─────────────────────────────────────────────
+   Toevoegen aan het einde van styles.css
+   ───────────────────────────────────────────── */
+
+/* ── Boekje-kaart header ── */
+.book-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.book-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.book-name {
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.book-description {
+  margin: 4px 0 8px;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Tag "Jouw boekje" vs "Van [naam]" */
+.book-owner-tag {
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.book-owner-tag--own {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.book-owner-tag--other {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Deelnemers-badge rechtsboven op de kaart */
+.book-member-count {
+  font-size: 0.8rem;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── MembersPanel ── */
+.members-panel {
+  margin-top: 12px;
+  padding: 14px;
   background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html, body, #root {
-  margin: 0;
-  min-height: 100%;
-}
-
-body {
-  background: #f8fafc;
-}
-
-button, input, select, textarea {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-}
-
-.app-shell {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-.app-header {
+.members-section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+  margin-bottom: 6px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 6px;
 }
 
-.nav-list {
+.members-count {
+  background: #e5e7eb;
+  color: #374151;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Rij voor één lid */
+.members-list {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #e5e7eb;
+}
+
+.member-row--owner {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+/* Avatar cirkel met initialen */
+.member-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #374151;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.member-avatar--owner {
+  background: #bfdbfe;
+  color: #1d4ed8;
+}
+
+/* Naam + email gestapeld */
+.member-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-self-tag {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.member-email {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-email--loading {
+  font-style: italic;
+}
+
+/* Eigenaar-badge */
+.member-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  flex-shrink: 0;
+}
+
+/* ── Uitnodigingsformulier ── */
+.invite-form {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.invite-form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.invite-input-row {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  align-items: center;
 }
 
-.nav-button {
-  border: 1px solid #d1d5db;
-  border-radius: 999px;
-  background: white;
-  color: #111827;
-  padding: 8px 16px;
+.invite-input-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 0.875rem;
 }
 
-.nav-button.active {
-  background: #1d4ed8;
-  color: white;
-  border-color: #1d4ed8;
+.invite-hint {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
 }
 
-.page-section {
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  background: white;
-  padding: 24px;
+/* ── Success tekst ── */
+.success-text {
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
 }
-
-.section-title {
-  margin-top: 0;
-  margin-bottom: 16px;
-}
-
-.grid {
-  display: grid;
-  gap: 16px;
-}
-
-.grid-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.card {
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 16px;
-}
-
-.list-card {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.list-card li {
-  padding: 12px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.list-card li:last-child {
-  border-bottom: none;
-}
-
-.form-row {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.input-group {
-  display: grid;
-  gap: 4px;
-}
-
-input, select {
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  padding: 10px 12px;
-}
-
-.primary-button {
-  background: #1d4ed8;
-  color: white;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 10px 16px;
-}
-
-.secondary-button {
-  background: transparent;
-  border: 1px solid #d1d5db;
-  border-radius: 999px;
-  padding: 10px 16px;
-}
-
-.alert {
-  color: #b91c1c;
-  font-size: 0.95rem;
-}
-
-/* ── Knop varianten ── */
-.secondary-button {
-  color: #374151;
-}
-
-.secondary-button:hover {
-  background: #f3f4f6;
-}
-
-.primary-button.small,
-.secondary-button.small {
-  padding: 4px 12px;
-  font-size: 0.8rem;
-}
-
-.secondary-button.danger {
-  color: #b91c1c;
-  border-color: #fca5a5;
-}
-
-.secondary-button.danger:hover {
-  background: #fee2e2;
-}
-
-/* ── Grid 3 kolommen ── */
-.grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-/* ── Statistiek kaarten ── */
-.stat-card { text-align: center; }
-.stat-card.income { border-left: 4px solid #22c55e; }
-.stat-card.expense { border-left: 4px solid #ef4444; }
-.stat-label { font-size: 0.85rem; color: #6b7280; margin: 0; }
-.stat-value { font-size: 1.6rem; font-weight: 700; margin: 4px 0 0; }
-
-/* ── Transactie rijen ── */
-.transaction-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.transaction-item.expense { border-left: 3px solid #ef4444; padding-left: 8px; }
-.transaction-item.income { border-left: 3px solid #22c55e; padding-left: 8px; }
-.amount-col { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.amount { font-weight: 700; white-space: nowrap; }
-.amount.expense { color: #b91c1c; }
-.amount.income { color: #15803d; }
-
-/* ── Badges ── */
-.badge { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; margin-left: 6px; background: #e5e7eb; color: #374151; }
-.badge-danger { background: #fee2e2; color: #b91c1c; }
-.badge-warn { background: #fef3c7; color: #92400e; }
-
-/* ── Overige ── */
-.cat-header { display: flex; align-items: center; }
-.button-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-.empty-text { color: #9ca3af; font-style: italic; }
-.error-text { color: #b91c1c; background: #fee2e2; padding: 8px 12px; border-radius: 6px; }
-.active-book { background: #eff6ff; border: 1.5px solid #3b82f6 !important; }
