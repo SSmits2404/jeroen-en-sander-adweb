@@ -36,7 +36,7 @@ const mockTransactions = [
   {
     id: 'tx1',
     description: 'Boodschappen',
-    amount: 95,
+    amount: 96,
     date: '2026-06-18',
     type: 'expense' as const,
     categoryId: 'cat1',
@@ -104,7 +104,7 @@ describe('Categories', () => {
     expect(await screen.findByText('Voeding')).toBeInTheDocument();
     expect(screen.getByText('Reis')).toBeInTheDocument();
 
-    expect(screen.getByText(/Budget: €100\.00 • Gebruikt: €90\.00 • Resterend: €10\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Budget: €100\.00 • Gebruikt: €91\.00 • Resterend: €9\.00/)).toBeInTheDocument();
     expect(screen.getByText(/Budget: €50\.00 • Gebruikt: €60\.00 • Resterend: €-10\.00/)).toBeInTheDocument();
 
     expect(screen.getByText('Budget bijna op')).toBeInTheDocument();
