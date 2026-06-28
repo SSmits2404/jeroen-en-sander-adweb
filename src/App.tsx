@@ -7,12 +7,14 @@ import { Categories } from './features/categories/Categories';
 import { Transactions } from './features/transactions/Transactions';
 import { signOutUser } from './services/authService';
 import { useAppState, AppStateProvider } from './state/appState';
+import { Charts } from './features/charts/Charts';
 
 const sections = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'budget-books', label: 'Huishoudboekjes' },
   { id: 'transactions', label: 'Uitgaven' },
   { id: 'categories', label: 'Categorieën' },
+  { id: 'charts', label: 'Grafieken' },
 ];
 
 function AppContent() {
@@ -50,6 +52,7 @@ function AppContent() {
       {activeSection === 'budget-books' && <BudgetBooks />}
       {activeSection === 'transactions' && <Transactions />}
       {activeSection === 'categories' && <Categories />}
+      {activeSection === 'charts' && <Charts />}
     </AppShell>
   );
 }
