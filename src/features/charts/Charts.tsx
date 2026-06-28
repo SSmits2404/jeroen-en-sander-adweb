@@ -24,6 +24,7 @@ import {
 import { subscribeTransactions, Transaction } from '../../services/transactionService';
 import { subscribeCategories, Category } from '../../services/categoryService';
 import { useAppState } from '../../state/appState';
+import { ActiveBookBadge } from '../../components/ActiveBookBadge';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -113,6 +114,7 @@ export function Charts() {
   return (
     <div>
       <h2 className="section-title">Grafieken</h2>
+      <ActiveBookBadge />
 
       {noData && (
         <p className="empty-text" style={{ marginBottom: 16 }}>

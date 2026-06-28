@@ -242,6 +242,20 @@ input, select {
   color: #6b7280;
 }
 
+/* Badge op Dashboard/Uitgaven/Categorieën/Grafieken die laat zien van wie
+   het geselecteerde boekje is (zelfde stijl als book-owner-tag) */
+.active-book-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.active-book-badge__name {
+  font-weight: 600;
+  color: #374151;
+}
+
 /* Deelnemers-badge rechtsboven op de kaart */
 .book-member-count {
   font-size: 0.8rem;

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { subscribeTransactions, Transaction } from '../../services/transactionService';
 import { subscribeCategories, Category } from '../../services/categoryService';
 import { useAppState } from '../../state/appState';
+import { ActiveBookBadge } from '../../components/ActiveBookBadge';
 
 export function Dashboard() {
   const { activeBudgetBookId } = useAppState();
@@ -56,6 +57,7 @@ export function Dashboard() {
   return (
     <div>
       <h2 className="section-title">Dashboard — {currentMonth}</h2>
+      <ActiveBookBadge />
 
       <div className="grid grid-3">
         <div className="card stat-card income">

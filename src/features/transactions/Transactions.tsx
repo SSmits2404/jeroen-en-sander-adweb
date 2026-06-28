@@ -15,6 +15,7 @@ import {
 } from '../../services/transactionService';
 import { subscribeCategories, Category } from '../../services/categoryService';
 import { useAppState } from '../../state/appState';
+import { ActiveBookBadge } from '../../components/ActiveBookBadge';
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
@@ -150,6 +151,7 @@ export function Transactions() {
   return (
     <div>
       <h2 className="section-title">Uitgaven en inkomsten</h2>
+      <ActiveBookBadge />
       {error && <p className="error-text">{error}</p>}
 
       <div className="grid grid-3">
