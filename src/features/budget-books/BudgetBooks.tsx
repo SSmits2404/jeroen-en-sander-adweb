@@ -4,18 +4,20 @@
  * Component dat huishoudboekjes toont en beheert.
  * Separation of Concern:
  * - Dit component weet niets van Firestore — het roept alleen de service aan.
- * - Real-time: via subscribeBudgetBooks (onSnapshot) werkt de lijst automatisch bij.
+ * - Real-time: via subscribeBudgetBooksForUser (onSnapshot) werkt de lijst automatisch bij.
+ *   Deze functie combineert owned én member boekjes.
  */
 import { useEffect, useState } from 'react';
 import {
-  subscribeBudgetBooks,
   createBudgetBook,
   updateBudgetBook,
   archiveBudgetBook,
   restoreBudgetBook,
   BudgetBook,
 } from '../../services/budgetBookService';
+import { subscribeBudgetBooksForUser } from '../../services/inviteService';
 import { useAppState } from '../../state/appState';
+import { MembersPanel } from './MembersPanel';
 
 export function BudgetBooks() {
   const { user, activeBudgetBookId, setActiveBudgetBookId } = useAppState();
@@ -23,6 +25,7 @@ export function BudgetBooks() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
+  const [expandedMembersId, setExpandedMembersId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +33,8 @@ export function BudgetBooks() {
     if (!user) return;
     setLoading(true);
 
-    const unsubscribe = subscribeBudgetBooks(user.id, (books) => {
+    // subscribeBudgetBooksForUser haalt zowel owned als member boekjes op
+    const unsubscribe = subscribeBudgetBooksForUser(user.id, (books) => {
       setBudgetBooks(books);
       setLoading(false);
     });
@@ -100,6 +104,10 @@ export function BudgetBooks() {
     }
   }
 
+  function toggleMembers(bookId: string) {
+    setExpandedMembersId((prev) => (prev === bookId ? null : bookId));
+  }
+
   if (loading) return <p>Laden…</p>;
 
   return (
@@ -151,6 +159,7 @@ export function BudgetBooks() {
               <li key={book.id} className={activeBudgetBookId === book.id ? 'active-book' : ''}>
                 <strong>{book.name}</strong>
                 {book.description && <p>{book.description}</p>}
+
                 <div className="button-row">
                   <button
                     className="primary-button small"
@@ -161,21 +170,40 @@ export function BudgetBooks() {
                   >
                     {activeBudgetBookId === book.id ? 'Deselecteren' : 'Selecteren'}
                   </button>
+
+                  {/* Alleen eigenaar kan bewerken en archiveren */}
+                  {book.ownerId === user?.id && (
+                    <>
+                      <button
+                        className="secondary-button small"
+                        type="button"
+                        onClick={() => startEdit(book)}
+                      >
+                        Bewerken
+                      </button>
+                      <button
+                        className="secondary-button small"
+                        type="button"
+                        onClick={() => handleArchive(book.id)}
+                      >
+                        Archiveren
+                      </button>
+                    </>
+                  )}
+
                   <button
                     className="secondary-button small"
                     type="button"
-                    onClick={() => startEdit(book)}
+                    onClick={() => toggleMembers(book.id)}
+                    aria-expanded={expandedMembersId === book.id}
                   >
-                    Bewerken
-                  </button>
-                  <button
-                    className="secondary-button small"
-                    type="button"
-                    onClick={() => handleArchive(book.id)}
-                  >
-                    Archiveren
+                    {expandedMembersId === book.id ? 'Deelnemers verbergen' : 'Deelnemers'}
                   </button>
                 </div>
+
+                {expandedMembersId === book.id && (
+                  <MembersPanel book={book} />
+                )}
               </li>
             ))}
           </ul>
@@ -189,13 +217,15 @@ export function BudgetBooks() {
               <li key={book.id}>
                 <strong>{book.name}</strong>
                 {book.description && <p>{book.description}</p>}
-                <button
-                  className="secondary-button small"
-                  type="button"
-                  onClick={() => handleRestore(book.id)}
-                >
-                  Herstellen
-                </button>
+                {book.ownerId === user?.id && (
+                  <button
+                    className="secondary-button small"
+                    type="button"
+                    onClick={() => handleRestore(book.id)}
+                  >
+                    Herstellen
+                  </button>
+                )}
               </li>
             ))}
           </ul>
