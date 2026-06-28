@@ -1,20 +1,26 @@
 /**
  * MembersPanel.tsx
  *
- * Toont de huidige leden van een boekje en maakt het mogelijk om:
- * - Nieuwe leden uit te nodigen via e-mailadres
- * - Bestaande leden te verwijderen (alleen de eigenaar kan dit)
+ * Toont de deelnemers van een boekje met namen in plaats van UIDs.
+ * Eigenaar is duidelijk zichtbaar. Alleen de eigenaar kan uitnodigen en verwijderen.
  *
- * Separation of Concern: dit component heeft geen idee van Firestore.
- * Het roept alleen functies aan uit inviteService.
+ * Separation of Concern: geen Firestore-kennis in dit component.
+ * Namen worden opgehaald via useMemberProfiles (hook) en acties via inviteService.
  */
 import { useState } from 'react';
 import { inviteMember, removeMember } from '../../services/inviteService';
 import { BudgetBook } from '../../services/budgetBookService';
 import { useAppState } from '../../state/appState';
+import { useMemberProfiles } from '../../hooks/useMemberProfiles';
 
 interface MembersPanelProps {
   book: BudgetBook;
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
 }
 
 export function MembersPanel({ book }: MembersPanelProps) {
@@ -27,17 +33,24 @@ export function MembersPanel({ book }: MembersPanelProps) {
   const isOwner = user?.id === book.ownerId;
   const memberIds: string[] = book.memberIds ?? [];
 
+  // Haal profielen op voor eigenaar + alle leden
+  const allUids = [...new Set([book.ownerId, ...memberIds])];
+  const profiles = useMemberProfiles(allUids);
+
+  const ownerProfile = profiles.get(book.ownerId);
+  const ownerLabel = book.ownerId === user?.id
+    ? `Jij (${user.name})`
+    : ownerProfile?.displayName ?? '…';
+
   async function handleInvite() {
     if (!email.trim() || !user) return;
-
     setLoading(true);
     setError(null);
     setSuccessMsg(null);
-
     try {
       const { displayName } = await inviteMember(book.id, email.trim(), user.id);
       setEmail('');
-      setSuccessMsg(`${displayName} is toegevoegd aan "${book.name}".`);
+      setSuccessMsg(`${displayName} is uitgenodigd voor "${book.name}".`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Uitnodigen mislukt.');
     } finally {
@@ -57,40 +70,72 @@ export function MembersPanel({ book }: MembersPanelProps) {
 
   return (
     <div className="members-panel">
-      <h4>Deelnemers</h4>
 
       {/* Eigenaar */}
-      <p className="members-owner">
-        <strong>Eigenaar:</strong> {book.ownerId === user?.id ? 'Jij' : book.ownerId}
-      </p>
+      <div className="members-section-label">Eigenaar</div>
+      <div className="member-row member-row--owner">
+        <div className="member-avatar member-avatar--owner">
+          {getInitials(ownerProfile?.displayName ?? ownerLabel)}
+        </div>
+        <div className="member-info">
+          <span className="member-name">{ownerLabel}</span>
+          {ownerProfile?.email && book.ownerId !== user?.id && (
+            <span className="member-email">{ownerProfile.email}</span>
+          )}
+        </div>
+        <span className="member-badge">Eigenaar</span>
+      </div>
 
       {/* Ledenlijst */}
+      <div className="members-section-label" style={{ marginTop: '12px' }}>
+        Deelnemers {memberIds.length > 0 && <span className="members-count">{memberIds.length}</span>}
+      </div>
+
       {memberIds.length === 0 ? (
-        <p className="empty-text">Nog geen andere deelnemers.</p>
+        <p className="empty-text" style={{ margin: '8px 0' }}>Nog geen andere deelnemers.</p>
       ) : (
-        <ul className="list-card members-list">
-          {memberIds.map((memberId) => (
-            <li key={memberId} className="members-list-item">
-              <span className="member-uid">{memberId}</span>
-              {isOwner && (
-                <button
-                  className="secondary-button small"
-                  type="button"
-                  onClick={() => handleRemove(memberId)}
-                >
-                  Verwijderen
-                </button>
-              )}
-            </li>
-          ))}
+        <ul className="members-list">
+          {memberIds.map((uid) => {
+            const profile = profiles.get(uid);
+            const displayName = profile?.displayName ?? uid;
+            const isSelf = uid === user?.id;
+            return (
+              <li key={uid} className="member-row">
+                <div className="member-avatar">
+                  {getInitials(displayName)}
+                </div>
+                <div className="member-info">
+                  <span className="member-name">
+                    {displayName}
+                    {isSelf && <span className="member-self-tag"> (jij)</span>}
+                  </span>
+                  {profile?.email && (
+                    <span className="member-email">{profile.email}</span>
+                  )}
+                  {!profile && (
+                    <span className="member-email member-email--loading">Profiel laden…</span>
+                  )}
+                </div>
+                {isOwner && (
+                  <button
+                    className="secondary-button small danger"
+                    type="button"
+                    onClick={() => handleRemove(uid)}
+                  >
+                    Verwijderen
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 
-      {/* Uitnodigingsformulier — alleen zichtbaar voor de eigenaar */}
+      {/* Uitnodigingsformulier (alleen eigenaar) */}
       {isOwner && (
         <div className="invite-form">
-          <div className="input-group">
-            <label htmlFor={`invite-email-${book.id}`}>Uitnodigen via e-mailadres</label>
+          <div className="invite-form-label">Iemand uitnodigen</div>
+          <div className="invite-input-row">
             <input
               id={`invite-email-${book.id}`}
               type="email"
@@ -100,20 +145,23 @@ export function MembersPanel({ book }: MembersPanelProps) {
               disabled={loading}
               onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
             />
+            <button
+              className="primary-button small"
+              type="button"
+              onClick={handleInvite}
+              disabled={!email.trim() || loading}
+            >
+              {loading ? 'Bezig…' : 'Uitnodigen'}
+            </button>
           </div>
-          <button
-            className="primary-button small"
-            type="button"
-            onClick={handleInvite}
-            disabled={!email.trim() || loading}
-          >
-            {loading ? 'Bezig…' : 'Uitnodigen'}
-          </button>
+          <p className="invite-hint">
+            De persoon moet al een account hebben in de app.
+          </p>
         </div>
       )}
 
-      {error && <p className="error-text">{error}</p>}
-      {successMsg && <p className="success-text">{successMsg}</p>}
+      {error && <p className="error-text" style={{ marginTop: '8px' }}>{error}</p>}
+      {successMsg && <p className="success-text" style={{ marginTop: '8px' }}>{successMsg}</p>}
     </div>
   );
 }
