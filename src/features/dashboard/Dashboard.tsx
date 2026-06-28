@@ -19,7 +19,10 @@ export function Dashboard() {
     if (!activeBudgetBookId) return;
     const unsubTx = subscribeTransactions(activeBudgetBookId, setTransactions);
     const unsubCat = subscribeCategories(activeBudgetBookId, setCategories);
-    return () => { unsubTx(); unsubCat(); };
+    return () => {
+      unsubTx();
+      unsubCat();
+    };
   }, [activeBudgetBookId]);
 
   const monthTransactions = useMemo(
@@ -27,12 +30,18 @@ export function Dashboard() {
     [transactions, currentMonth]
   );
 
-  const totalIncome = monthTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const totalExpense = monthTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const totalIncome = monthTransactions
+    .filter((t) => t.type === 'income')
+    .reduce((s, t) => s + t.amount, 0);
+  const totalExpense = monthTransactions
+    .filter((t) => t.type === 'expense')
+    .reduce((s, t) => s + t.amount, 0);
   const balance = totalIncome - totalExpense;
 
-  function spentForCategory(catId: string) {
-    return transactions.filter((t) => t.categoryId === catId && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  function usedForCategory(catId: string) {
+    return transactions
+      .filter((t) => t.categoryId === catId)
+      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
   }
 
   if (!activeBudgetBookId) {
@@ -68,20 +77,31 @@ export function Dashboard() {
         {categories.length === 0 && <p className="empty-text">Nog geen categorieën aangemaakt.</p>}
         <ul className="list-card">
           {categories.map((cat) => {
-            const spent = spentForCategory(cat.id);
-            const pct = cat.budget > 0 ? Math.min(100, (spent / cat.budget) * 100) : 0;
-            const over = spent > cat.budget && cat.budget > 0;
-            const near = !over && pct >= 80;
+            const used = usedForCategory(cat.id);
+            const pct = cat.budget > 0 ? Math.min(100, (Math.max(used, 0) / cat.budget) * 100) : 0;
+            const over = used > cat.budget;
+            const near = !over && cat.budget > 0 && used / cat.budget > 0.9;
+
             return (
               <li key={cat.id}>
                 <div className="cat-header">
                   <strong>{cat.name}</strong>
                   {over && <span className="badge badge-danger">Over budget!</span>}
-                  {near && <span className="badge badge-warn">Bijna op</span>}
+                  {near && <span className="badge badge-warn">Budget bijna op</span>}
                 </div>
-                <p>€{spent.toFixed(2)} / €{cat.budget.toFixed(2)}</p>
+                <p>
+                  €{used.toFixed(2)} / €{cat.budget.toFixed(2)}
+                  {cat.endDate && ` • Tot: ${cat.endDate}`}
+                </p>
                 <div style={{ height: 8, background: '#e5e7eb', borderRadius: 999, marginTop: 4 }}>
-                  <div style={{ width: `${pct}%`, height: '100%', background: over ? '#b91c1c' : near ? '#f59e0b' : '#22c55e', borderRadius: 999 }} />
+                  <div
+                    style={{
+                      width: `${pct}%`,
+                      height: '100%',
+                      background: over ? '#b91c1c' : near ? '#f59e0b' : '#22c55e',
+                      borderRadius: 999,
+                    }}
+                  />
                 </div>
               </li>
             );
