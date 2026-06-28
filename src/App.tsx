@@ -10,12 +10,20 @@ const sections = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'budget-books', label: 'Huishoudboekjes' },
   { id: 'transactions', label: 'Uitgaven' },
-  { id: 'categories', label: 'Categorieën' }
+  { id: 'categories', label: 'Categorieën' },
 ];
+
+function AuthScreen() {
+  return <div>Login required</div>;
+}
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const { user } = useAppState();
+
+  if (!user) {
+    return <AuthScreen />;
+  }
 
   return (
     <AppShell
