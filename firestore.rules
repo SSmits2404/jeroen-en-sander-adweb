@@ -6,40 +6,100 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(householdBook) {
-      return householdBook.data.ownerId == request.auth.uid;
+    function budgetBookDoc(bookId) {
+      return get(/databases/$(database)/documents/budgetBooks/$(bookId));
     }
 
-    function isMember(householdBook) {
-      return request.auth.uid in householdBook.data.memberIds;
+    function budgetBookExists(bookId) {
+      return exists(/databases/$(database)/documents/budgetBooks/$(bookId));
     }
 
-    function canReadHouseholdBook(householdBook) {
-      return isSignedIn() && (isOwner(householdBook) || isMember(householdBook));
+    function canReadBudgetBook(book) {
+      return isSignedIn() && (
+        book.data.ownerId == request.auth.uid ||
+        (book.data.memberIds is list && request.auth.uid in book.data.memberIds)
+      );
     }
 
-    function canEditHouseholdBook(householdBook) {
-      return isSignedIn() && isOwner(householdBook);
+    function canEditBudgetBook(book) {
+      return isSignedIn() && book.data.ownerId == request.auth.uid;
     }
 
-    match /householdBooks/{bookId} {
-      allow read: if canReadHouseholdBook(resource);
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid && request.resource.data.name is string && request.resource.data.name.size() > 0;
-      allow update: if isSignedIn() && canEditHouseholdBook(resource);
+    match /budgetBooks/{bookId} {
+      allow read: if canReadBudgetBook(resource);
+
+      allow create: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.description is string
+        && request.resource.data.archived is bool;
+
+      allow update: if canEditBudgetBook(resource)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.description is string
+        && request.resource.data.archived is bool;
+
       allow delete: if false;
     }
 
     match /categories/{categoryId} {
-      allow read: if isSignedIn() && exists(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)) && (get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.memberIds);
-      allow create: if isSignedIn() && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.budget is number && request.resource.data.budget >= 0 && request.resource.data.householdBookId is string;
-      allow update: if isSignedIn() && request.resource.data.householdBookId is string && exists(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)) && get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.ownerId == request.auth.uid;
+      allow read: if isSignedIn()
+        && resource.data.budgetBookId is string
+        && budgetBookExists(resource.data.budgetBookId)
+        && canReadBudgetBook(budgetBookDoc(resource.data.budgetBookId));
+
+      allow create: if isSignedIn()
+        && request.resource.data.budgetBookId is string
+        && budgetBookExists(request.resource.data.budgetBookId)
+        && canEditBudgetBook(budgetBookDoc(request.resource.data.budgetBookId))
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.budget is number
+        && request.resource.data.budget >= 0;
+
+      allow update: if isSignedIn()
+        && resource.data.budgetBookId is string
+        && request.resource.data.budgetBookId == resource.data.budgetBookId
+        && budgetBookExists(resource.data.budgetBookId)
+        && canEditBudgetBook(budgetBookDoc(resource.data.budgetBookId))
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.budget is number
+        && request.resource.data.budget >= 0;
+
       allow delete: if false;
     }
 
     match /transactions/{transactionId} {
-      allow read: if isSignedIn() && exists(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)) && (get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.ownerId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.memberIds);
-      allow create: if isSignedIn() && request.resource.data.householdBookId is string && request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.amount is number && request.resource.data.amount != 0 && (request.resource.data.type == 'expense' || request.resource.data.type == 'income');
-      allow update: if isSignedIn() && exists(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)) && get(/databases/$(database)/documents/householdBooks/$(request.resource.data.householdBookId)).data.ownerId == request.auth.uid;
+      allow read: if isSignedIn()
+        && resource.data.budgetBookId is string
+        && budgetBookExists(resource.data.budgetBookId)
+        && canReadBudgetBook(budgetBookDoc(resource.data.budgetBookId));
+
+      allow create: if isSignedIn()
+        && request.resource.data.budgetBookId is string
+        && budgetBookExists(request.resource.data.budgetBookId)
+        && canEditBudgetBook(budgetBookDoc(request.resource.data.budgetBookId))
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.amount is number
+        && request.resource.data.amount != 0
+        && (request.resource.data.type == 'expense' || request.resource.data.type == 'income');
+
+      allow update: if isSignedIn()
+        && resource.data.budgetBookId is string
+        && request.resource.data.budgetBookId == resource.data.budgetBookId
+        && budgetBookExists(resource.data.budgetBookId)
+        && canEditBudgetBook(budgetBookDoc(resource.data.budgetBookId))
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.amount is number
+        && request.resource.data.amount != 0
+        && (request.resource.data.type == 'expense' || request.resource.data.type == 'income');
+
       allow delete: if false;
     }
 

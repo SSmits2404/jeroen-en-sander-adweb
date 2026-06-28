@@ -3,13 +3,14 @@
  *
  * Component dat huishoudboekjes toont en beheert.
  * Separation of Concern:
- * - Dit component weet NIETS van Firestore — het roept alleen de service aan.
+ * - Dit component weet niets van Firestore — het roept alleen de service aan.
  * - Real-time: via subscribeBudgetBooks (onSnapshot) werkt de lijst automatisch bij.
  */
 import { useEffect, useState } from 'react';
 import {
   subscribeBudgetBooks,
   createBudgetBook,
+  updateBudgetBook,
   archiveBudgetBook,
   restoreBudgetBook,
   BudgetBook,
@@ -21,10 +22,10 @@ export function BudgetBooks() {
   const [budgetBooks, setBudgetBooks] = useState<BudgetBook[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Real-time subscription — cleanup in return van useEffect
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -34,28 +35,57 @@ export function BudgetBooks() {
       setLoading(false);
     });
 
-    // Cleanup: verwijder de Firebase listener als het component unmount
     return () => unsubscribe();
   }, [user]);
 
   const activeBooks = budgetBooks.filter((b) => !b.archived);
   const archivedBooks = budgetBooks.filter((b) => b.archived);
 
-  async function handleCreate() {
+  function resetForm() {
+    setEditId(null);
+    setName('');
+    setDescription('');
+  }
+
+  async function handleSubmit() {
     if (!name.trim() || !user) return;
+
     try {
-      await createBudgetBook(name.trim(), description.trim(), user.id);
-      setName('');
-      setDescription('');
+      setError(null);
+
+      if (editId) {
+        await updateBudgetBook(editId, {
+          name: name.trim(),
+          description: description.trim(),
+        });
+      } else {
+        await createBudgetBook(name.trim(), description.trim(), user.id);
+      }
+
+      resetForm();
     } catch {
-      setError('Kon boekje niet aanmaken. Probeer opnieuw.');
+      setError('Kon boekje niet opslaan. Probeer opnieuw.');
     }
+  }
+
+  function startEdit(book: BudgetBook) {
+    setEditId(book.id);
+    setName(book.name);
+    setDescription(book.description);
   }
 
   async function handleArchive(id: string) {
     try {
+      setError(null);
       await archiveBudgetBook(id);
-      if (activeBudgetBookId === id) setActiveBudgetBookId(null);
+
+      if (activeBudgetBookId === id) {
+        setActiveBudgetBookId(null);
+      }
+
+      if (editId === id) {
+        resetForm();
+      }
     } catch {
       setError('Archiveren mislukt.');
     }
@@ -63,6 +93,7 @@ export function BudgetBooks() {
 
   async function handleRestore(id: string) {
     try {
+      setError(null);
       await restoreBudgetBook(id);
     } catch {
       setError('Herstellen mislukt.');
@@ -96,9 +127,19 @@ export function BudgetBooks() {
             placeholder="Omschrijving"
           />
         </div>
-        <button className="primary-button" type="button" onClick={handleCreate} disabled={!name.trim()}>
-          Boekje toevoegen
+        <button
+          className="primary-button"
+          type="button"
+          onClick={handleSubmit}
+          disabled={!name.trim()}
+        >
+          {editId ? 'Opslaan' : 'Boekje toevoegen'}
         </button>
+        {editId && (
+          <button className="secondary-button" type="button" onClick={resetForm}>
+            Annuleren
+          </button>
+        )}
       </div>
 
       <div className="grid grid-2">
@@ -114,12 +155,24 @@ export function BudgetBooks() {
                   <button
                     className="primary-button small"
                     type="button"
-                    onClick={() => setActiveBudgetBookId(book.id)}
-                    disabled={activeBudgetBookId === book.id}
+                    onClick={() =>
+                      setActiveBudgetBookId(activeBudgetBookId === book.id ? null : book.id)
+                    }
                   >
-                    {activeBudgetBookId === book.id ? '✓ Geselecteerd' : 'Selecteren'}
+                    {activeBudgetBookId === book.id ? 'Deselecteren' : 'Selecteren'}
                   </button>
-                  <button className="secondary-button small" type="button" onClick={() => handleArchive(book.id)}>
+                  <button
+                    className="secondary-button small"
+                    type="button"
+                    onClick={() => startEdit(book)}
+                  >
+                    Bewerken
+                  </button>
+                  <button
+                    className="secondary-button small"
+                    type="button"
+                    onClick={() => handleArchive(book.id)}
+                  >
                     Archiveren
                   </button>
                 </div>
@@ -136,7 +189,11 @@ export function BudgetBooks() {
               <li key={book.id}>
                 <strong>{book.name}</strong>
                 {book.description && <p>{book.description}</p>}
-                <button className="secondary-button small" type="button" onClick={() => handleRestore(book.id)}>
+                <button
+                  className="secondary-button small"
+                  type="button"
+                  onClick={() => handleRestore(book.id)}
+                >
                   Herstellen
                 </button>
               </li>
