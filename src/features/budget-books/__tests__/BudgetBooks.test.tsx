@@ -8,6 +8,7 @@ import * as budgetBookService from '../../../services/budgetBookService';
 import { AppStateProvider } from '../../../state/appState';
 
 // Voeg de Firebase Mocks toe die de AppStateProvider nodig heeft!
+// Voeg de Firebase Mocks toe die de AppStateProvider nodig heeft!
 vi.mock('../../../services/firebase', () => ({
   auth: {},
   firestore: {},
@@ -23,6 +24,13 @@ vi.mock('firebase/auth', () => ({
     });
     return vi.fn();
   }),
+}));
+
+// Voeg deze mock toe om te voorkomen dat de échte Firestore SDK gaat valideren!
+vi.mock('firebase/firestore', () => ({
+  doc: vi.fn(),
+  collection: vi.fn(),
+  onSnapshot: vi.fn(() => vi.fn()), // geeft een lege unsubscribe functie terug
 }));
 
 const mockBooks = [
