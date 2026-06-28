@@ -1,14 +1,10 @@
 import { defineConfig } from 'vitest/config';
 
+// vitest.config.ts
 export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/setupTests.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html'],
-      all: true
-    }
-  }
+    setupFiles: ['./src/test/setup.ts'], // Zorg dat dit pad klopt
+  },
 });

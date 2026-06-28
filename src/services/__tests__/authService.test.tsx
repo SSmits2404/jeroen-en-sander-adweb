@@ -1,10 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as authService from '../authService';
 
+// Gebruik geen variabelen van buitenaf in deze fabriek!
+// Mock de firebase-service
 vi.mock('../firebase', () => ({
-  auth: {},
+  auth: {}, // Leeg object is vaak genoeg als je functies ook mockt
+  firestore: {
+    // Voeg hier de firestore instantie toe die je code nodig heeft
+  },
 }));
 
+// Mock specifieke functies uit firebase/firestore
+vi.mock('firebase/firestore', () => ({
+  collection: vi.fn(),
+  setDoc: vi.fn(),
+  doc: vi.fn(),
+  serverTimestamp: vi.fn(),
+}));
 vi.mock('firebase/auth', () => ({
   createUserWithEmailAndPassword: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),

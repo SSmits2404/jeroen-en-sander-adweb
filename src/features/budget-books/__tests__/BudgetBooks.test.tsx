@@ -1,9 +1,5 @@
 /**
  * BudgetBooks.test.tsx
- *
- * Test de happy flows van het BudgetBooks component.
- * Firebase wordt gemockt zodat de test geen echte netwerkverbinding nodig heeft.
- * Separation of Concern maakt dit eenvoudig: we mocken alleen de service-laag.
  */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -11,18 +7,24 @@ import { BudgetBooks } from '../BudgetBooks';
 import * as budgetBookService from '../../../services/budgetBookService';
 import { AppStateProvider } from '../../../state/appState';
 
-// Mock de volledige service-module
-vi.mock('../../../services/budgetBookService', () => ({
-  subscribeBudgetBooks: vi.fn(),
-  createBudgetBook: vi.fn(),
-  archiveBudgetBook: vi.fn(),
-  restoreBudgetBook: vi.fn(),
-}));
-
 const mockBooks = [
   { id: '1', name: 'Gezin', description: 'Familie', ownerId: 'demo-user', memberIds: ['demo-user'], archived: false },
   { id: '2', name: 'Vakantie', description: 'Zomer', ownerId: 'demo-user', memberIds: ['demo-user'], archived: true },
 ];
+
+// 1. Mock de service-module direct met de werkende callback-implementatie bovenin!
+vi.mock('../../../services/budgetBookService', () => ({
+  subscribeBudgetBooks: vi.fn((_uid, cb) => {
+    cb([
+      { id: '1', name: 'Gezin', description: 'Familie', ownerId: 'demo-user', memberIds: ['demo-user'], archived: false },
+      { id: '2', name: 'Vakantie', description: 'Zomer', ownerId: 'demo-user', memberIds: ['demo-user'], archived: true },
+    ]);
+    return vi.fn(); // unsubscribe-functie
+  }),
+  createBudgetBook: vi.fn(() => Promise.resolve()),
+  archiveBudgetBook: vi.fn(() => Promise.resolve()),
+  restoreBudgetBook: vi.fn(() => Promise.resolve()),
+}));
 
 function renderWithProvider() {
   return render(
@@ -33,17 +35,11 @@ function renderWithProvider() {
 }
 
 beforeEach(() => {
+  // 2. Clear alleen de call-historie, behoud de mock-implementaties hierboven
   vi.clearAllMocks();
-  // subscribeBudgetBooks roept de callback direct aan met testdata
-  vi.mocked(budgetBookService.subscribeBudgetBooks).mockImplementation((_uid, cb) => {
-    cb(mockBooks);
-    return vi.fn(); // unsubscribe-functie
-  });
-  vi.mocked(budgetBookService.createBudgetBook).mockResolvedValue();
-  vi.mocked(budgetBookService.archiveBudgetBook).mockResolvedValue();
-  vi.mocked(budgetBookService.restoreBudgetBook).mockResolvedValue();
 });
 
+// ... de rest van je describe('BudgetBooks', () => { ... }) blijft exact hetzelfde
 describe('BudgetBooks', () => {
   it('toont actieve en gearchiveerde boekjes', async () => {
     renderWithProvider();

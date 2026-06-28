@@ -43,6 +43,21 @@ const mockTransactions = [
   },
 ];
 
+const mockDefaultState = {
+  user: { id: 'demo-user', name: 'Demo', email: 'demo@demo.com' },
+  authReady: true,
+  activeBudgetBookId: 'book1',
+  activeBudgetBook: {
+    id: 'book1',
+    name: 'Demo',
+    description: 'Demo budgetboek',
+    ownerId: 'demo-user',
+    archived: false,
+    memberIds: ['demo-user'],
+  },
+  setActiveBudgetBookId: vi.fn(),
+};
+
 function renderWithBook() {
   return render(
     <AppStateContext.Provider
@@ -171,30 +186,20 @@ describe('Transactions', () => {
     });
   });
 
-  it('toont fallback wanneer geen budgetboek actief is', () => {
-    render(
-      <AppStateContext.Provider
+ it('toont fallback wanneer geen budgetboek actief is', async () => {
+  render(
+    <AppStateContext.Provider
       value={{
-        user: { id: 'demo-user', name: 'Demo', email: 'demo@demo.com' },
+        user: { id: 'test-user', name: 'Test', email: 'test@test.com' },
         authReady: true,
-        activeBudgetBookId: 'book1',
-        activeBudgetBook: {
-          id: 'book1',
-          name: 'Demo',
-          description: 'Demo budgetboek',
-          ownerId: 'demo-user',
-          archived: false,
-          memberIds: ['demo-user'],
-        },
+        activeBudgetBookId: null,
+        activeBudgetBook: null,
         setActiveBudgetBookId: vi.fn(),
       }}
     >
       <Transactions />
     </AppStateContext.Provider>
-    );
-
-    expect(
-      screen.getByText(/Selecteer eerst een huishoudboekje/i)
-    ).toBeInTheDocument();
-  });
+  );
+  expect(screen.getByText(/Selecteer eerst een huishoudboekje/i)).toBeInTheDocument();
+});
 });

@@ -8,10 +8,29 @@ vi.mock('../services/firebase', () => ({
   firestore: {},
 }));
 
+// In src/state/appState.test.ts
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn((auth, callback) => {
+    callback({ 
+      uid: 'demo-user', 
+      displayName: 'Demo gebruiker', // Moet matchen met de test
+      email: 'demo@voorbeeld.nl'      // Moet matchen met de test
+    });
+    return vi.fn();
+  }),
+  // ... andere mocks
+}));
+
 describe('AppState', () => {
   beforeEach(() => {
-    localStorage.clear();
+  vi.clearAllMocks();
+  // Voeg dit toe als extra veiligheid:
+  Object.defineProperty(window, 'localStorage', {
+    value: { getItem: vi.fn(), setItem: vi.fn(), clear: vi.fn() },
+    writable: true
   });
+});
 
   it('levert een ingelogde gebruiker uit Firebase Auth', async () => {
     const wrapper = ({ children }: { children: ReactNode }) =>
