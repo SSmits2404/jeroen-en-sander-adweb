@@ -24,15 +24,15 @@ import {
 import { subscribeTransactions, Transaction } from '../../services/transactionService';
 import { subscribeCategories, Category } from '../../services/categoryService';
 import { useAppState } from '../../state/appState';
+import { ActiveBookBadge } from '../../components/ActiveBookBadge';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-/** Geeft de laatste `n` maanden terug als YYYY-MM strings, meest recent laatste. */
 function lastNMonths(n: number): string[] {
   const months: string[] = [];
   const now = new Date();
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+    const d = new Date(now.getFullYear(), now.getMonth() - i+1, 1);
     months.push(d.toISOString().slice(0, 7));
   }
   return months;
@@ -45,8 +45,15 @@ function shortMonth(ym: string): string {
   return d.toLocaleString('nl-NL', { month: 'short' });
 }
 
-function euroFormatter(value: number) {
-  return `€${value.toFixed(2)}`;
+function euroFormatter(value: number | string | readonly (string | number)[] | undefined) {
+  const amount = Array.isArray(value)
+    ? parseFloat(String(value[0]))
+    : typeof value === 'number'
+    ? value
+    : value
+    ? parseFloat(String(value))
+    : 0;
+  return `€${amount.toFixed(2)}`;
 }
 
 // ─── component ───────────────────────────────────────────────────────────────
@@ -66,7 +73,7 @@ export function Charts() {
     };
   }, [activeBudgetBookId]);
 
-  // ── lijngraﬁek: inkomsten + uitgaven per maand ──────────────────────────
+  // ── lijngrafiek: inkomsten + uitgaven per maand ──────────────────────────
   const months = useMemo(() => lastNMonths(6), []);
 
   const lineData = useMemo(
@@ -114,6 +121,7 @@ export function Charts() {
   return (
     <div>
       <h2 className="section-title">Grafieken</h2>
+      <ActiveBookBadge />
 
       {noData && (
         <p className="empty-text" style={{ marginBottom: 16 }}>

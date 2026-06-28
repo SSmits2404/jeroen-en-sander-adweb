@@ -13,8 +13,10 @@ import {
   createElement,
 } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../services/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, firestore } from '../services/firebase';
 import { mapFirebaseUser, type AppUser } from '../services/authService';
+import type { BudgetBook } from '../services/budgetBookService';
 
 export interface User extends AppUser {}
 
@@ -23,6 +25,13 @@ interface AppState {
   authReady: boolean;
   activeBudgetBookId: string | null;
   setActiveBudgetBookId: (id: string | null) => void;
+  /**
+   * Het volledige document van het actieve huishoudboekje (real-time via onSnapshot).
+   * Hiermee kunnen alle tabbladen — niet alleen "Huishoudboekjes" — laten zien
+   * van wie het geselecteerde boekje is (eigen boekje of uitgenodigd door iemand anders).
+   * Is `null` zolang er geen boekje geselecteerd is of de data nog laadt.
+   */
+  activeBudgetBook: BudgetBook | null;
 }
 
 const defaultState: AppState = {
@@ -30,6 +39,7 @@ const defaultState: AppState = {
   authReady: false,
   activeBudgetBookId: null,
   setActiveBudgetBookId: () => {},
+  activeBudgetBook: null,
 };
 
 export const AppStateContext = createContext<AppState>(defaultState);
@@ -79,6 +89,37 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setActiveBudgetBookIdRaw(id);
   }
 
+  // Houd het volledige boekje-document van het actieve boekje real-time bij,
+  // zodat elk tabblad (niet alleen "Huishoudboekjes") kan tonen van wie het is.
+  const [activeBudgetBook, setActiveBudgetBook] = useState<BudgetBook | null>(null);
+
+  useEffect(() => {
+    if (!activeBudgetBookId) {
+      setActiveBudgetBook(null);
+      return;
+    }
+
+    try {
+      const unsub = onSnapshot(doc(firestore, 'budgetBooks', activeBudgetBookId), (snap) => {
+        if (!snap.exists()) {
+          setActiveBudgetBook(null);
+          return;
+        }
+        setActiveBudgetBook({
+          id: snap.id,
+          ...(snap.data() as Omit<BudgetBook, 'id'>),
+        });
+      });
+
+      return unsub;
+    } catch {
+      // Beschermt tegen omgevingen waar `firestore` niet (volledig) gemockt is,
+      // bijv. unit tests die alleen activeBudgetBookId/localStorage testen.
+      setActiveBudgetBook(null);
+      return;
+    }
+  }, [activeBudgetBookId]);
+
   return createElement(
     AppStateContext.Provider,
     {
@@ -87,6 +128,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         authReady,
         activeBudgetBookId,
         setActiveBudgetBookId,
+        activeBudgetBook,
       },
     },
     children

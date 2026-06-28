@@ -15,6 +15,7 @@ import {
 } from '../../services/categoryService';
 import { subscribeTransactions, Transaction } from '../../services/transactionService';
 import { useAppState } from '../../state/appState';
+import { ActiveBookBadge } from '../../components/ActiveBookBadge';
 
 export function Categories() {
   const { activeBudgetBookId } = useAppState();
@@ -101,6 +102,7 @@ export function Categories() {
   return (
     <div>
       <h2 className="section-title">Categorieën</h2>
+      <ActiveBookBadge />
       {error && <p className="error-text">{error}</p>}
 
       <div className="form-row">

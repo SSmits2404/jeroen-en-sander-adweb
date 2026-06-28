@@ -198,3 +198,236 @@ input, select {
 .empty-text { color: #9ca3af; font-style: italic; }
 .error-text { color: #b91c1c; background: #fee2e2; padding: 8px 12px; border-radius: 6px; }
 .active-book { background: #eff6ff; border: 1.5px solid #3b82f6 !important; }
+.book-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.book-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.book-name {
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.book-description {
+  margin: 4px 0 8px;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Tag "Jouw boekje" vs "Van [naam]" */
+.book-owner-tag {
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.book-owner-tag--own {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.book-owner-tag--other {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Badge op Dashboard/Uitgaven/Categorieën/Grafieken die laat zien van wie
+   het geselecteerde boekje is (zelfde stijl als book-owner-tag) */
+.active-book-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.active-book-badge__name {
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Deelnemers-badge rechtsboven op de kaart */
+.book-member-count {
+  font-size: 0.8rem;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── MembersPanel ── */
+.members-panel {
+  margin-top: 12px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.members-section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.members-count {
+  background: #e5e7eb;
+  color: #374151;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Rij voor één lid */
+.members-list {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #e5e7eb;
+}
+
+.member-row--owner {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+/* Avatar cirkel met initialen */
+.member-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #374151;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.member-avatar--owner {
+  background: #bfdbfe;
+  color: #1d4ed8;
+}
+
+/* Naam + email gestapeld */
+.member-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-self-tag {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.member-email {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-email--loading {
+  font-style: italic;
+}
+
+/* Eigenaar-badge */
+.member-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  flex-shrink: 0;
+}
+
+/* ── Uitnodigingsformulier ── */
+.invite-form {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.invite-form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.invite-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.invite-input-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 0.875rem;
+}
+
+.invite-hint {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+/* ── Success tekst ── */
+.success-text {
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}

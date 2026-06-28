@@ -27,6 +27,7 @@ export interface BudgetBook {
   description: string;
   ownerId: string;
   archived: boolean;
+  memberIds: string[];
 }
 
 const COL = 'budgetBooks';

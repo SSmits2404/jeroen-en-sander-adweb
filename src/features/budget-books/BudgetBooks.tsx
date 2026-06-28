@@ -4,18 +4,20 @@
  * Component dat huishoudboekjes toont en beheert.
  * Separation of Concern:
  * - Dit component weet niets van Firestore — het roept alleen de service aan.
- * - Real-time: via subscribeBudgetBooks (onSnapshot) werkt de lijst automatisch bij.
+ * - Real-time: via subscribeBudgetBooksForUser (onSnapshot) werkt de lijst automatisch bij.
  */
 import { useEffect, useState } from 'react';
 import {
-  subscribeBudgetBooks,
   createBudgetBook,
   updateBudgetBook,
   archiveBudgetBook,
   restoreBudgetBook,
   BudgetBook,
 } from '../../services/budgetBookService';
+import { subscribeBudgetBooksForUser } from '../../services/inviteService';
 import { useAppState } from '../../state/appState';
+import { useMemberProfiles } from '../../hooks/useMemberProfiles';
+import { MembersPanel } from './MembersPanel';
 
 export function BudgetBooks() {
   const { user, activeBudgetBookId, setActiveBudgetBookId } = useAppState();
@@ -23,20 +25,23 @@ export function BudgetBooks() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
+  const [expandedMembersId, setExpandedMembersId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-
-    const unsubscribe = subscribeBudgetBooks(user.id, (books) => {
+    const unsubscribe = subscribeBudgetBooksForUser(user.id, (books) => {
       setBudgetBooks(books);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, [user]);
+
+  // Haal eigenaar-profielen op voor alle boekjes (voor de "van"-regel op de kaart)
+  const ownerIds = [...new Set(budgetBooks.map((b) => b.ownerId))];
+  const ownerProfiles = useMemberProfiles(ownerIds);
 
   const activeBooks = budgetBooks.filter((b) => !b.archived);
   const archivedBooks = budgetBooks.filter((b) => b.archived);
@@ -49,19 +54,13 @@ export function BudgetBooks() {
 
   async function handleSubmit() {
     if (!name.trim() || !user) return;
-
     try {
       setError(null);
-
       if (editId) {
-        await updateBudgetBook(editId, {
-          name: name.trim(),
-          description: description.trim(),
-        });
+        await updateBudgetBook(editId, { name: name.trim(), description: description.trim() });
       } else {
         await createBudgetBook(name.trim(), description.trim(), user.id);
       }
-
       resetForm();
     } catch {
       setError('Kon boekje niet opslaan. Probeer opnieuw.');
@@ -78,14 +77,8 @@ export function BudgetBooks() {
     try {
       setError(null);
       await archiveBudgetBook(id);
-
-      if (activeBudgetBookId === id) {
-        setActiveBudgetBookId(null);
-      }
-
-      if (editId === id) {
-        resetForm();
-      }
+      if (activeBudgetBookId === id) setActiveBudgetBookId(null);
+      if (editId === id) resetForm();
     } catch {
       setError('Archiveren mislukt.');
     }
@@ -98,6 +91,10 @@ export function BudgetBooks() {
     } catch {
       setError('Herstellen mislukt.');
     }
+  }
+
+  function toggleMembers(bookId: string) {
+    setExpandedMembersId((prev) => (prev === bookId ? null : bookId));
   }
 
   if (loading) return <p>Laden…</p>;
@@ -127,12 +124,7 @@ export function BudgetBooks() {
             placeholder="Omschrijving"
           />
         </div>
-        <button
-          className="primary-button"
-          type="button"
-          onClick={handleSubmit}
-          disabled={!name.trim()}
-        >
+        <button className="primary-button" type="button" onClick={handleSubmit} disabled={!name.trim()}>
           {editId ? 'Opslaan' : 'Boekje toevoegen'}
         </button>
         {editId && (
@@ -147,37 +139,77 @@ export function BudgetBooks() {
           <h3>Actieve boekjes</h3>
           {activeBooks.length === 0 && <p className="empty-text">Geen actieve boekjes.</p>}
           <ul className="list-card">
-            {activeBooks.map((book) => (
-              <li key={book.id} className={activeBudgetBookId === book.id ? 'active-book' : ''}>
-                <strong>{book.name}</strong>
-                {book.description && <p>{book.description}</p>}
-                <div className="button-row">
-                  <button
-                    className="primary-button small"
-                    type="button"
-                    onClick={() =>
-                      setActiveBudgetBookId(activeBudgetBookId === book.id ? null : book.id)
-                    }
-                  >
-                    {activeBudgetBookId === book.id ? 'Deselecteren' : 'Selecteren'}
-                  </button>
-                  <button
-                    className="secondary-button small"
-                    type="button"
-                    onClick={() => startEdit(book)}
-                  >
-                    Bewerken
-                  </button>
-                  <button
-                    className="secondary-button small"
-                    type="button"
-                    onClick={() => handleArchive(book.id)}
-                  >
-                    Archiveren
-                  </button>
-                </div>
-              </li>
-            ))}
+            {activeBooks.map((book) => {
+              const isOwnBook = book.ownerId === user?.id;
+              const ownerProfile = ownerProfiles.get(book.ownerId);
+              const ownerName = isOwnBook
+                ? 'Jouw boekje'
+                : `Van ${ownerProfile?.displayName ?? '…'}`;
+              const memberCount = (book.memberIds ?? []).length;
+              const isActive = activeBudgetBookId === book.id;
+
+              return (
+                <li key={book.id} className={isActive ? 'active-book' : ''}>
+                  <div className="book-header">
+                    <div className="book-title-block">
+                      <strong className="book-name">{book.name}</strong>
+                      <span className={`book-owner-tag ${isOwnBook ? 'book-owner-tag--own' : 'book-owner-tag--other'}`}>
+                        {ownerName}
+                      </span>
+                    </div>
+                    {memberCount > 0 && (
+                      <span className="book-member-count" title={`${memberCount} deelnemer${memberCount !== 1 ? 's' : ''}`}>
+                        👥 {memberCount}
+                      </span>
+                    )}
+                  </div>
+
+                  {book.description && (
+                    <p className="book-description">{book.description}</p>
+                  )}
+
+                  <div className="button-row">
+                    <button
+                      className="primary-button small"
+                      type="button"
+                      onClick={() => setActiveBudgetBookId(isActive ? null : book.id)}
+                    >
+                      {isActive ? 'Deselecteren' : 'Selecteren'}
+                    </button>
+
+                    {isOwnBook && (
+                      <>
+                        <button
+                          className="secondary-button small"
+                          type="button"
+                          onClick={() => startEdit(book)}
+                        >
+                          Bewerken
+                        </button>
+                        <button
+                          className="secondary-button small"
+                          type="button"
+                          onClick={() => handleArchive(book.id)}
+                        >
+                          Archiveren
+                        </button>
+                      </>
+                    )}
+
+                    <button
+                      className="secondary-button small"
+                      type="button"
+                      onClick={() => toggleMembers(book.id)}
+                      aria-expanded={expandedMembersId === book.id}
+                    >
+                      {expandedMembersId === book.id ? 'Verbergen' : '👥 Deelnemers'}
+                    </button>
+                  </div>
+
+                  {expandedMembersId === book.id && <MembersPanel book={book} />}
+                </li>
+              );
+            })}
           </ul>
         </div>
 
@@ -185,19 +217,36 @@ export function BudgetBooks() {
           <h3>Gearchiveerde boekjes</h3>
           {archivedBooks.length === 0 && <p className="empty-text">Geen gearchiveerde boekjes.</p>}
           <ul className="list-card">
-            {archivedBooks.map((book) => (
-              <li key={book.id}>
-                <strong>{book.name}</strong>
-                {book.description && <p>{book.description}</p>}
-                <button
-                  className="secondary-button small"
-                  type="button"
-                  onClick={() => handleRestore(book.id)}
-                >
-                  Herstellen
-                </button>
-              </li>
-            ))}
+            {archivedBooks.map((book) => {
+              const isOwnBook = book.ownerId === user?.id;
+              const ownerProfile = ownerProfiles.get(book.ownerId);
+              const ownerName = isOwnBook
+                ? 'Jouw boekje'
+                : `Van ${ownerProfile?.displayName ?? '…'}`;
+              return (
+                <li key={book.id}>
+                  <div className="book-header">
+                    <div className="book-title-block">
+                      <strong className="book-name">{book.name}</strong>
+                      <span className={`book-owner-tag ${isOwnBook ? 'book-owner-tag--own' : 'book-owner-tag--other'}`}>
+                        {ownerName}
+                      </span>
+                    </div>
+                  </div>
+                  {book.description && <p className="book-description">{book.description}</p>}
+                  {isOwnBook && (
+                    <button
+                      className="secondary-button small"
+                      type="button"
+                      onClick={() => handleRestore(book.id)}
+                      style={{ marginTop: '8px' }}
+                    >
+                      Herstellen
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>

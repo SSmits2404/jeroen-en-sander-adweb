@@ -20,8 +20,8 @@ vi.mock('../../../services/budgetBookService', () => ({
 }));
 
 const mockBooks = [
-  { id: '1', name: 'Gezin', description: 'Familie', ownerId: 'demo-user', archived: false },
-  { id: '2', name: 'Vakantie', description: 'Zomer', ownerId: 'demo-user', archived: true },
+  { id: '1', name: 'Gezin', description: 'Familie', ownerId: 'demo-user', memberIds: ['demo-user'], archived: false },
+  { id: '2', name: 'Vakantie', description: 'Zomer', ownerId: 'demo-user', memberIds: ['demo-user'], archived: true },
 ];
 
 function renderWithProvider() {
