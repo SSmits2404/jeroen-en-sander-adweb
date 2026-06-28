@@ -38,6 +38,12 @@ export function Transactions() {
     };
   }, [activeBudgetBookId]);
 
+  useEffect(() => {
+    if (categoryId && !categories.some((c) => c.id === categoryId)) {
+      setCategoryId('');
+    }
+  }, [categories, categoryId]);
+
   const filteredTransactions = useMemo(
     () =>
       [...transactions]
@@ -56,8 +62,17 @@ export function Transactions() {
 
   async function handleCreate() {
     const value = Number(amount);
+    const categoryRequired = categories.length > 0;
+
     if (!description.trim() || !value || !user || !activeBudgetBookId) return;
+    if (categoryRequired && !categoryId) {
+      setError('Selecteer een categorie.');
+      return;
+    }
+
     try {
+      setError(null);
+
       await createTransaction({
         description: description.trim(),
         amount: value,
@@ -67,6 +82,7 @@ export function Transactions() {
         budgetBookId: activeBudgetBookId,
         userId: user.id,
       });
+
       setDescription('');
       setAmount('');
       setCategoryId('');
@@ -77,6 +93,7 @@ export function Transactions() {
 
   async function handleDelete(id: string) {
     try {
+      setError(null);
       await deleteTransaction(id);
     } catch {
       setError('Verwijderen mislukt.');
@@ -86,7 +103,7 @@ export function Transactions() {
   if (!activeBudgetBookId) {
     return (
       <p className="empty-text">
-        Selecteer eerst een huishoudboekje via het tabblad "Huishoudboekjes".
+        Selecteer eerst een huishoudboekje via het tabblad &quot;Huishoudboekjes&quot;.
       </p>
     );
   }
@@ -96,7 +113,6 @@ export function Transactions() {
       <h2 className="section-title">Uitgaven en inkomsten</h2>
       {error && <p className="error-text">{error}</p>}
 
-      {/* Statistieken */}
       <div className="grid grid-3">
         <div className="card stat-card income">
           <p className="stat-label">Inkomsten</p>
@@ -112,7 +128,6 @@ export function Transactions() {
         </div>
       </div>
 
-      {/* Formulier */}
       <div className="form-row">
         <div className="input-group">
           <label htmlFor="tx-desc">Omschrijving</label>
@@ -147,12 +162,8 @@ export function Transactions() {
         {categories.length > 0 && (
           <div className="input-group">
             <label htmlFor="tx-cat">Categorie</label>
-            <select
-              id="tx-cat"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">— geen —</option>
+            <select id="tx-cat" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+              <option value="">Selecteer categorie</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -165,13 +176,12 @@ export function Transactions() {
           className="primary-button"
           type="button"
           onClick={handleCreate}
-          disabled={!description.trim() || !amount}
+          disabled={!description.trim() || !amount || (categories.length > 0 && !categoryId)}
         >
           Toevoegen
         </button>
       </div>
 
-      {/* Maandfilter */}
       <div className="form-row">
         <div className="input-group">
           <label htmlFor="month-filter">Maand</label>
@@ -184,7 +194,6 @@ export function Transactions() {
         </div>
       </div>
 
-      {/* Lijst */}
       <div className="card">
         <h3>Transacties — {filterMonth}</h3>
         {filteredTransactions.length === 0 && (

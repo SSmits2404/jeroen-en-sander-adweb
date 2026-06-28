@@ -30,27 +30,47 @@ export function Categories() {
     if (!activeBudgetBookId) return;
     const unsubCat = subscribeCategories(activeBudgetBookId, setCategories);
     const unsubTx = subscribeTransactions(activeBudgetBookId, setTransactions);
-    return () => { unsubCat(); unsubTx(); };
+    return () => {
+      unsubCat();
+      unsubTx();
+    };
   }, [activeBudgetBookId]);
 
-  // Bereken uitgaven per categorie uit transacties (real-time, geen opgeslagen 'spent' nodig)
-  function spentForCategory(catId: string): number {
+  function usedForCategory(catId: string): number {
     return transactions
-      .filter((t) => t.categoryId === catId && t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter((t) => t.categoryId === catId)
+      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
   }
 
   async function handleSubmit() {
     const budgetValue = Number(budget);
-    if (!name.trim() || isNaN(budgetValue) || !activeBudgetBookId) return;
+
+    if (!name.trim() || budget.trim() === '' || Number.isNaN(budgetValue) || !activeBudgetBookId) {
+      return;
+    }
+
     try {
+      setError(null);
+
       if (editId) {
-        await updateCategory(editId, { name: name.trim(), budget: budgetValue, endDate: endDate || undefined });
+        await updateCategory(editId, {
+          name: name.trim(),
+          budget: budgetValue,
+          endDate: endDate || undefined,
+        });
         setEditId(null);
       } else {
-        await createCategory({ name: name.trim(), budget: budgetValue, endDate: endDate || undefined, budgetBookId: activeBudgetBookId });
+        await createCategory({
+          name: name.trim(),
+          budget: budgetValue,
+          endDate: endDate || undefined,
+          budgetBookId: activeBudgetBookId,
+        });
       }
-      setName(''); setBudget(''); setEndDate('');
+
+      setName('');
+      setBudget('');
+      setEndDate('');
     } catch {
       setError('Opslaan mislukt.');
     }
@@ -64,7 +84,12 @@ export function Categories() {
   }
 
   async function handleDelete(id: string) {
-    try { await deleteCategory(id); } catch { setError('Verwijderen mislukt.'); }
+    try {
+      setError(null);
+      await deleteCategory(id);
+    } catch {
+      setError('Verwijderen mislukt.');
+    }
   }
 
   if (!activeBudgetBookId) {
@@ -79,21 +104,51 @@ export function Categories() {
       <div className="form-row">
         <div className="input-group">
           <label htmlFor="cat-name">Naam categorie</label>
-          <input id="cat-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Naam" />
+          <input
+            id="cat-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Naam"
+          />
         </div>
         <div className="input-group">
           <label htmlFor="cat-budget">Max budget (€)</label>
-          <input id="cat-budget" value={budget} onChange={(e) => setBudget(e.target.value)} type="number" placeholder="0" />
+          <input
+            id="cat-budget"
+            value={budget}
+            onChange={(e) => setBudget(e.target.value)}
+            type="number"
+            placeholder="0"
+          />
         </div>
         <div className="input-group">
           <label htmlFor="cat-end">Einddatum (optioneel)</label>
-          <input id="cat-end" value={endDate} onChange={(e) => setEndDate(e.target.value)} type="date" />
+          <input
+            id="cat-end"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            type="date"
+          />
         </div>
-        <button className="primary-button" type="button" onClick={handleSubmit} disabled={!name.trim()}>
+        <button
+          className="primary-button"
+          type="button"
+          onClick={handleSubmit}
+          disabled={!name.trim() || budget.trim() === ''}
+        >
           {editId ? 'Opslaan' : 'Categorie toevoegen'}
         </button>
         {editId && (
-          <button className="secondary-button" type="button" onClick={() => { setEditId(null); setName(''); setBudget(''); setEndDate(''); }}>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => {
+              setEditId(null);
+              setName('');
+              setBudget('');
+              setEndDate('');
+            }}
+          >
             Annuleren
           </button>
         )}
@@ -104,10 +159,12 @@ export function Categories() {
         {categories.length === 0 && <p className="empty-text">Nog geen categorieën.</p>}
         <ul className="list-card">
           {categories.map((cat) => {
-            const spent = spentForCategory(cat.id);
-            const percentage = cat.budget > 0 ? Math.min(100, (spent / cat.budget) * 100) : 0;
-            const overBudget = spent > cat.budget && cat.budget > 0;
-            const nearLimit = !overBudget && percentage >= 80;
+            const used = usedForCategory(cat.id);
+            const remaining = cat.budget - used;
+            const percentage =
+              cat.budget > 0 ? Math.min(100, (Math.max(used, 0) / cat.budget) * 100) : 0;
+            const overBudget = used > cat.budget;
+            const nearLimit = !overBudget && cat.budget > 0 && used / cat.budget >= 0.8;
             const barColor = overBudget ? '#b91c1c' : nearLimit ? '#f59e0b' : '#22c55e';
 
             return (
@@ -117,16 +174,48 @@ export function Categories() {
                   {overBudget && <span className="badge badge-danger">Over budget!</span>}
                   {nearLimit && <span className="badge badge-warn">Bijna op</span>}
                 </div>
+
                 <p>
-                  Budget: €{cat.budget.toFixed(2)} • Besteed: €{spent.toFixed(2)}
+                  Budget: €{cat.budget.toFixed(2)} • Gebruikt: €{used.toFixed(2)} • Resterend:{' '}
+                  €{remaining.toFixed(2)}
                   {cat.endDate && ` • Tot: ${cat.endDate}`}
                 </p>
-                <div style={{ marginTop: 8, height: 10, width: '100%', background: '#e5e7eb', borderRadius: 999 }}>
-                  <div style={{ width: `${percentage}%`, height: '100%', background: barColor, borderRadius: 999, transition: 'width 0.3s' }} />
+
+                <div
+                  style={{
+                    marginTop: 8,
+                    height: 10,
+                    width: '100%',
+                    background: '#e5e7eb',
+                    borderRadius: 999,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${percentage}%`,
+                      height: '100%',
+                      background: barColor,
+                      borderRadius: 999,
+                      transition: 'width 0.3s',
+                    }}
+                  />
                 </div>
+
                 <div className="button-row" style={{ marginTop: 8 }}>
-                  <button className="secondary-button small" type="button" onClick={() => startEdit(cat)}>Bewerken</button>
-                  <button className="secondary-button small danger" type="button" onClick={() => handleDelete(cat.id)}>Verwijderen</button>
+                  <button
+                    className="secondary-button small"
+                    type="button"
+                    onClick={() => startEdit(cat)}
+                  >
+                    Bewerken
+                  </button>
+                  <button
+                    className="secondary-button small danger"
+                    type="button"
+                    onClick={() => handleDelete(cat.id)}
+                  >
+                    Verwijderen
+                  </button>
                 </div>
               </li>
             );
