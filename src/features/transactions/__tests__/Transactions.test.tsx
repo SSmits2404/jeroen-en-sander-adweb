@@ -161,4 +161,20 @@ describe('Transactions', () => {
       expect(txService.deleteTransaction).toHaveBeenCalledWith('tx1');
     });
   });
+
+  it('toont fallback wanneer geen budgetboek actief is', () => {
+    render(
+      <AppStateContext.Provider value={{
+        user: { id: 'demo-user', name: 'Demo' },
+        activeBudgetBookId: null,
+        setActiveBudgetBookId: vi.fn(),
+      }}>
+        <Transactions />
+      </AppStateContext.Provider>
+    );
+
+    expect(
+      screen.getByText(/Selecteer eerst een huishoudboekje/i)
+    ).toBeInTheDocument();
+  });
 });

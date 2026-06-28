@@ -132,20 +132,6 @@ const overBudgetTransactions = [
 ];
 
 function renderWithBook(transactions = normalTransactions) {
-  return render(
-    <AppStateContext.Provider
-      value={{
-        user: { id: 'demo-user', name: 'Demo' },
-        activeBudgetBookId: 'book1',
-        setActiveBudgetBookId: vi.fn(),
-      }}
-    >
-      <Categories />
-    </AppStateContext.Provider>
-  );
-}
-
-function mockSubscriptions(transactions = normalTransactions) {
   vi.mocked(catService.subscribeCategories).mockImplementation((_id, cb) => {
     cb(mockCategories);
     return vi.fn();
@@ -159,16 +145,24 @@ function mockSubscriptions(transactions = normalTransactions) {
   vi.mocked(catService.createCategory).mockResolvedValue();
   vi.mocked(catService.updateCategory).mockResolvedValue();
   vi.mocked(catService.deleteCategory).mockResolvedValue();
+
+  return render(
+    <AppStateContext.Provider value={{
+      user: { id: 'demo-user', name: 'Demo' },
+      activeBudgetBookId: 'book1',
+      setActiveBudgetBookId: vi.fn(),
+    }}>
+      <Categories />
+    </AppStateContext.Provider>
+  );
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockSubscriptions(normalTransactions);
 });
 
 describe('Categories', () => {
   it('toont categorie met normale voortgang (onder 90%)', async () => {
-    mockSubscriptions(normalTransactions);
     renderWithBook(normalTransactions);
 
     expect(await screen.findByText('Voeding')).toBeInTheDocument();
@@ -182,7 +176,6 @@ describe('Categories', () => {
   });
 
   it('toont waarschuwing bij bijna vol budget (boven 90%)', async () => {
-    mockSubscriptions(warningTransactions);
     renderWithBook(warningTransactions);
 
     expect(await screen.findByText('Voeding')).toBeInTheDocument();
@@ -195,7 +188,6 @@ describe('Categories', () => {
   });
 
   it('toont over budget status correct', async () => {
-    mockSubscriptions(overBudgetTransactions);
     renderWithBook(overBudgetTransactions);
 
     expect(await screen.findByText('Reis')).toBeInTheDocument();
